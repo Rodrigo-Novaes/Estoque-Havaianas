@@ -1,0 +1,3604 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Editar Produto - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-pencil-square me-2"></i>Editar Produto
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex">
+    <a href="{{ url_for('produtos') }}" class="btn btn-outline-secondary me-2">
+        <i class="bi bi-arrow-left me-2"></i> Voltar
+    </a>
+    <a href="{{ url_for('detalhe_produto', id=produto.id) }}" class="btn btn-outline-primary">
+        <i class="bi bi-eye me-2"></i> Ver Detalhes
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Editar Produto e Grades</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('editar_produto', id=produto.id) }}" id="formProduto">
+                    
+                    <!-- DADOS BÁSICOS DO PRODUTO -->
+                    <div class="row">
+                        <!-- Código/SKU Base -->
+                        <div class="col-md-6 mb-3" style="position: relative">
+                            <label class="form-label">Código Base do Produto *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="bi bi-upc-scan"></i>
+                                </span>
+                                <input type="search" class="form-control" name="codigo_base" id="codigo_base"
+                                    placeholder="Ex: HAV000" required 
+                                    oninput="
+                                    this.value = this.value.toUpperCase();
+                                    buscarSugestoes(this.value);" 
+                                    autocomplete="off" 
+                                    value="{{ produto.sku }}">
+                                <button type="button" class="btn btn-outline-primary" onclick="gerarCodigoBase()"
+                                    title="Gerar Código">
+                                    <i class="bi bi-magic"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Código base (sem cor/tamanho) | Escaneie com o leitor</small>
+
+                            <!-- Container para sugestões -->
+                            <div id="sugestoesContainer" class="mt-1" style="
+                                        display: none;
+                                        position: absolute;
+                                        z-index: 50;
+                                        width: 100%;
+                                    ">
+                                <div class="card border shadow">
+                                    <div class="card-body p-0">
+                                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom bg-light">
+                                            <small class="text-muted">Produtos encontrados:</small>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-muted"
+                                                onclick="fecharSugestoes()">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                        <div id="listaSugestoes" style="max-height: 300px; overflow-y: auto"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Descrição do Modelo *</label>
+                            <input type="text" class="form-control" name="descricao" id="descricao"
+                                   placeholder="Ex: Havaianas Slim"
+                                   value="{{ produto.descricao }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Modelo -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Modelo *</label>
+                            <div class="input-group">
+                                <select class="form-select" name="modelo" id="modelo" required autocomplete="off">
+                                    <option value="">Selecione...</option>
+                                    <!-- Modelos serão carregados dinamicamente via JS -->
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalNovoModelo()" 
+                                        data-bs-toggle="tooltip" title="Cadastrar novo modelo">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Gênero -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Gênero *</label>
+                            <select class="form-select" name="genero" id="genero" required autocomplete="off">
+                                <option value="">Selecione...</option>
+                                <option value="Masculino" {% if produto.genero == 'Masculino' %}selected{% endif %}>Masculino</option>
+                                <option value="Feminino" {% if produto.genero == 'Feminino' %}selected{% endif %}>Feminino</option>
+                                <option value="Unissex" {% if produto.genero == 'Unissex' %}selected{% endif %}>Unissex</option>
+                                <option value="Infantil" {% if produto.genero == 'Infantil' %}selected{% endif %}>Infantil</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Tipo -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo *</label>
+                            <select class="form-select" name="tipo" id="tipo" required onchange="ajustarTamanhosPorTipo()" autocomplete="off">
+                                <option value="">Selecione...</option>
+                                <option value="Adulto" {% if produto.tipo == 'Adulto' %}selected{% endif %}>Adulto</option>
+                                <option value="Infantil" {% if produto.tipo == 'Infantil' %}selected{% endif %}>Infantil</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Coleção -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Coleção (opcional)</label>
+                            <input type="text" class="form-control" name="colecao" id="colecao"
+                                   placeholder="Ex: Verão 2024, Clássica, Especial"
+                                   autocomplete="off"
+                                   value="{{ produto.colecao or '' }}">
+                        </div>
+                        
+                        <!-- Custo -->
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Custo *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" class="form-control" name="custo" id="custo"
+                                       placeholder="0,00" 
+                                       value="{{ "{:,.2f}".format(produto.custo or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}" 
+                                       required autocomplete="off">
+                            </div>
+                        </div>
+                        
+                        <!-- Preço -->
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Preço de Venda *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" class="form-control" name="preco" id="preco"
+                                       placeholder="0,00" 
+                                       value="{{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}" 
+                                       required autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- SEÇÃO DE GRADES (MÚLTIPLAS) -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Grades (Cores e Tamanhos)</h5>
+                        <button type="button" class="btn btn-sm btn-success" onclick="adicionarGrade()">
+                            <i class="bi bi-plus-circle me-1"></i> Adicionar Outra Grade
+                        </button>
+                    </div>
+                    
+                    <!-- Container para grades -->
+                    <div id="gradesContainer">
+                        <!-- As grades serão carregadas aqui via JavaScript -->
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="mt-4">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('produtos') }}" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle me-2"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Auxiliar do Scanner -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-upc-scan me-2"></i> Leitor de Código de Barras</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success small mb-3">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Scanner automático ativo!</strong> O campo de código está pronto para leitura.
+                </div>
+
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Como usar:</strong> Simplesmente escaneie o código de barras diretamente no campo "Código Base".
+                </div>
+
+                <div class="mt-3">
+                    <small class="text-muted d-block mb-1">
+                        <i class="bi bi-keyboard me-1"></i> Atalhos de teclado:
+                    </small>
+                    <div class="d-flex flex-wrap gap-1">
+                        <kbd>F5</kbd> Gerar Código | <kbd>ESC</kbd> Cancelar | <kbd>Enter</kbd> Próximo
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pré-visualização -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-eye me-2"></i> Visualização</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="border rounded p-3 bg-light mb-3">
+                        <!-- Produto -->
+                        <div class="small text-muted mb-1">PRODUTO</div>
+                        <div id="previewDescricao" class="fw-bold">{{ produto.descricao[:30] }}{% if produto.descricao|length > 30 %}...{% endif %}</div>
+
+                        <!-- Código -->
+                        <div class="small text-muted mb-1 mt-2">CÓDIGO BASE</div>
+                        <div id="previewCodigoBase" class="h6 font-monospace">{{ produto.sku }}</div>
+
+                        <!-- Modelo e Gênero -->
+                        <div class="d-flex justify-content-center gap-2 mt-2">
+                            <span class="badge bg-primary" id="previewModelo">{{ produto.modelo or '---' }}</span>
+                            <span class="badge bg-info" id="previewGenero">{{ produto.genero or '---' }}</span>
+                        </div>
+
+                        <!-- Custo e Preço -->
+                        <div class="mt-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="small text-muted">CUSTO</div>
+                                    <div class="h6 text-info" id="previewCusto">R$ {{ "{:,.2f}".format(produto.custo or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="small text-muted">PREÇO</div>
+                                    <div class="h4 text-success" id="previewPreco">R$ {{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+                                </div>
+                            </div>
+                            <!-- Margem -->
+                            <div class="mt-2" id="previewMargemContainer" style="display: none;">
+                                <div class="small text-muted">MARGEM</div>
+                                <div class="h6">
+                                    <span class="badge bg-success" id="previewMargem">
+                                        {% if produto.custo and produto.custo > 0 %}
+                                            {{ ((produto.preco_venda - produto.custo) / produto.custo * 100)|round(1) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grades -->
+                        <div class="mt-3">
+                            <div class="small text-muted">GRADES ATUAIS</div>
+                            <div id="previewGrades" class="mt-1">
+                                {% if produto.grades %}
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        {% for grade in produto.grades %}
+                                        <span class="badge bg-light text-dark border">
+                                            {{ grade.cor[:3] }}/{{ grade.tamanho }}
+                                            <small class="ms-1">({{ grade.estoque_atual }})</small>
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted small">Nenhuma grade</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 🔥 GERENCIAR CATÁLOGO 🔥 -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-gear me-2"></i> Gerenciar Catálogo</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="abrirGerenciadorModelos()">
+                        <i class="bi bi-tag me-2"></i> Gerenciar Modelos
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="abrirGerenciadorCores()">
+                        <i class="bi bi-palette me-2"></i> Gerenciar Cores
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="abrirGerenciadorTamanhos()">
+                        <i class="bi bi-rulers me-2"></i> Gerenciar Tamanhos
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="abrirGerenciadorLocalizacoes()">
+                        <i class="bi bi-geo-alt me-2"></i> Gerenciar Localizações
+                    </button>
+                </div>
+                <div class="mt-3 small text-muted">
+                    <i class="bi bi-info-circle me-1"></i> Gerencie os modelos, cores, tamanhos e localizações cadastradas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL PARA NOVO MODELO (PARA FORMULÁRIO) 🔥 -->
+<div class="modal fade" id="modalNovoModelo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-tag me-2"></i>
+                    Novo Modelo
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modeloEditandoId" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Nome do Modelo *</label>
+                    <input type="text" class="form-control" id="novoModeloNome"
+                        placeholder="Ex: Slim, Top, Classic" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Código Abreviado</label>
+                    <input type="text" class="form-control" id="novoModeloCodigo" placeholder="Ex: SLM (3 letras)"
+                        maxlength="3" style="text-transform: uppercase">
+                    <small class="text-muted">Três letras para gerar código do produto</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarModeloDoFormulario()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL PARA NOVA COR (PARA FORMULÁRIO) 🔥 -->
+<div class="modal fade" id="modalNovaCor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-palette me-2"></i>
+                    Nova Cor
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="corEditandoId" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Nome da Cor *</label>
+                    <input type="text" class="form-control" id="novaCorNome"
+                        placeholder="Ex: Vermelho, Azul Marinho" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Código da Cor</label>
+                    <div class="input-group">
+                        <input type="color" class="form-control form-control-color" id="novaCorHexadecimal"
+                            value="#0d6efd" title="Escolha a cor">
+                        <input type="text" class="form-control" id="novaCorHex" placeholder="#0d6efd" maxlength="7">
+                    </div>
+                    <small class="text-muted">Clique no quadrado ou digite o código hexadecimal</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarCorDoFormulario()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL PARA NOVO TAMANHO (PARA FORMULÁRIO) 🔥 -->
+<div class="modal fade" id="modalNovoTamanho" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-rulers me-2"></i>
+                    Novo Tamanho
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tamanhoEditandoId" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Tamanho/Número *</label>
+                    <input type="text" class="form-control" id="novoTamanhoValor"
+                        placeholder="Ex: 37, 42, Único" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Categoria</label>
+                    <select class="form-select" id="novoTamanhoCategoria">
+                        <option value="Adulto">Adulto</option>
+                        <option value="Infantil">Infantil</option>
+                        <option value="Único">Único/Tamanho Único</option>
+                    </select>
+                    <small class="text-muted">Para organização no sistema</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarTamanhoDoFormulario()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL PARA NOVA LOCALIZAÇÃO (PARA FORMULÁRIO) 🔥 -->
+<div class="modal fade" id="modalNovaLocalizacao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-geo-alt me-2"></i>
+                    Nova Localização
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="localizacaoEditandoId" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Código da Localização *</label>
+                    <input type="text" class="form-control" id="novaLocalizacaoCodigo"
+                        placeholder="Ex: PRATELEIRA-A1, CAIXA-01" autofocus style="text-transform: uppercase">
+                    <small class="text-muted">Use um código identificador (ex: PRATELEIRA-A1)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Descrição (opcional)</label>
+                    <input type="text" class="form-control" id="novaLocalizacaoDescricao"
+                        placeholder="Ex: Prateleira A, Corredor Central">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Tipo</label>
+                    <select class="form-select" id="novaLocalizacaoTipo">
+                        <option value="PRATELEIRA">Prateleira</option>
+                        <option value="CAIXA">Caixa</option>
+                        <option value="ESTOQUE">Área de Estoque</option>
+                        <option value="VITRINE">Vitrine</option>
+                        <option value="OUTRO">Outro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarLocalizacaoDoFormulario()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL GERENCIADOR DE MODELOS 🔥 -->
+<div class="modal fade" id="modalGerenciadorModelos" tabindex="-1" aria-labelledby="modalGerenciadorModelosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalGerenciadorModelosLabel">
+                    <i class="bi bi-tags me-2"></i>
+                    Gerenciar Modelos
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="width: 300px">
+                        <input type="text" class="form-control" id="filtroModelos" placeholder="Filtrar modelos..."
+                            onkeyup="filtrarListaModelos()">
+                        <button class="btn btn-outline-primary" type="button" onclick="abrirModalNovoModeloDoGerenciador()">
+                            <i class="bi bi-plus-lg"></i> Novo
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirModelosSelecionados()">
+                        <i class="bi bi-trash me-1"></i> Excluir Selecionados
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" id="selecionarTodosModelos"
+                                        onclick="selecionarTodos('modelos')">
+                                </th>
+                                <th width="40%">Nome do Modelo</th>
+                                <th width="25%">Código</th>
+                                <th width="20%">Data Cadastro</th>
+                                <th width="10%">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaModelos">
+                            <!-- Lista será preenchida via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-center" id="semModelos" style="display: none">
+                    <i class="bi bi-tag text-muted display-6 mb-3"></i>
+                    <p class="text-muted">Nenhum modelo cadastrado</p>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirModalNovoModeloDoGerenciador()">
+                        <i class="bi bi-plus-lg me-1"></i> Cadastrar Primeiro Modelo
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <div id="contadorModelos" class="text-muted small">
+                        0 modelos selecionados
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL GERENCIADOR DE CORES 🔥 -->
+<div class="modal fade" id="modalGerenciadorCores" tabindex="-1" aria-labelledby="modalGerenciadorCoresLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalGerenciadorCoresLabel">
+                    <i class="bi bi-palette2 me-2"></i>
+                    Gerenciar Cores
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="width: 300px">
+                        <input type="text" class="form-control" id="filtroCores" placeholder="Filtrar cores..."
+                            onkeyup="filtrarListaCores()">
+                        <button class="btn btn-outline-info" type="button" onclick="abrirModalNovaCorDoGerenciador(event)">
+                            <i class="bi bi-plus-lg"></i> Nova
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirCoresSelecionadas()">
+                        <i class="bi bi-trash me-1"></i> Excluir Selecionadas
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" id="selecionarTodasCores" onclick="selecionarTodos('cores')">
+                                </th>
+                                <th width="30%">Nome</th>
+                                <th width="25%">Código</th>
+                                <th width="20%">Visualização</th>
+                                <th width="20%">Data Cadastro</th>
+                                <th width="10%">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaCores">
+                            <!-- Lista será preenchida via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-center" id="semCores" style="display: none">
+                    <i class="bi bi-palette text-muted display-6 mb-3"></i>
+                    <p class="text-muted">Nenhuma cor cadastrada</p>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="abrirModalNovaCorDoGerenciador(event)">
+                        <i class="bi bi-plus-lg me-1"></i> Cadastrar Primeira Cor
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <div id="contadorCores" class="text-muted small">
+                        0 cores selecionadas
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL GERENCIADOR DE TAMANHOS 🔥 -->
+<div class="modal fade" id="modalGerenciadorTamanhos" tabindex="-1" aria-labelledby="modalGerenciadorTamanhosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalGerenciadorTamanhosLabel">
+                    <i class="bi bi-rulers me-2"></i>
+                    Gerenciar Tamanhos
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="width: 300px">
+                        <input type="text" class="form-control" id="filtroTamanhos" placeholder="Filtrar tamanhos..."
+                            onkeyup="filtrarListaTamanhos()">
+                        <button class="btn btn-outline-warning" type="button" onclick="abrirModalNovoTamanhoDoGerenciador(event)">
+                            <i class="bi bi-plus-lg"></i> Novo
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="excluirTamanhosSelecionados()">
+                        <i class="bi bi-trash me-1"></i> Excluir Selecionados
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" id="selecionarTodosTamanhos"
+                                        onclick="selecionarTodos('tamanhos')">
+                                </th>
+                                <th width="35%">Tamanho/Número</th>
+                                <th width="30%">Categoria</th>
+                                <th width="20%">Data Cadastro</th>
+                                <th width="10%">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaTamanhos">
+                            <!-- Lista será preenchida via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-center" id="semTamanhos" style="display: none">
+                    <i class="bi bi-rulers text-muted display-6 mb-3"></i>
+                    <p class="text-muted">Nenhum tamanho cadastrado</p>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="abrirModalNovoTamanhoDoGerenciador(event)">
+                        <i class="bi bi-plus-lg me-1"></i> Cadastrar Primeiro Tamanho
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <div id="contadorTamanhos" class="text-muted small">
+                        0 tamanhos selecionados
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL GERENCIADOR DE LOCALIZAÇÕES 🔥 -->
+<div class="modal fade" id="modalGerenciadorLocalizacoes" tabindex="-1" aria-labelledby="modalGerenciadorLocalizacoesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title" id="modalGerenciadorLocalizacoesLabel">
+                    <i class="bi bi-geo-alt-fill me-2"></i>
+                    Gerenciar Localizações
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="width: 300px">
+                        <input type="text" class="form-control" id="filtroLocalizacoes"
+                            placeholder="Filtrar localizações..." onkeyup="filtrarListaLocalizacoes()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="abrirModalNovaLocalizacaoDoGerenciador(event)">
+                            <i class="bi bi-plus-lg"></i> Nova
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                        onclick="excluirLocalizacoesSelecionadas()">
+                        <i class="bi bi-trash me-1"></i> Excluir Selecionadas
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" id="selecionarTodasLocalizacoes"
+                                        onclick="selecionarTodos('localizacoes')">
+                                </th>
+                                <th width="25%">Código</th>
+                                <th width="35%">Descrição</th>
+                                <th width="15%">Tipo</th>
+                                <th width="15%">Data Cadastro</th>
+                                <th width="5%">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaLocalizacoes">
+                            <!-- Lista será preenchida via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 text-center" id="semLocalizacoes" style="display: none">
+                    <i class="bi bi-geo-alt text-muted display-6 mb-3"></i>
+                    <p class="text-muted">Nenhuma localização cadastrada</p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="abrirModalNovaLocalizacaoDoGerenciador(event)">
+                        <i class="bi bi-plus-lg me-1"></i> Cadastrar Primeira Localização
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <div id="contadorLocalizacoes" class="text-muted small">
+                        0 localizações selecionadas
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAIS EMBUTIDOS NOS GERENCIADORES (usando data-bs-backdrop="static" para não fechar o gerenciador) 🔥 -->
+
+<!-- Modal Novo Modelo embutido no gerenciador -->
+<div class="modal fade" id="modalNovoModeloGerenciador" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-tag me-2"></i>
+                    Novo Modelo
+                </h6>
+                <button type="button" class="btn-close btn-close-white" onclick="fecharModalNovoModeloGerenciador()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modeloEditandoIdGerenciador" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Nome do Modelo *</label>
+                    <input type="text" class="form-control" id="novoModeloNomeGerenciador"
+                        placeholder="Ex: Slim, Top, Classic" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Código Abreviado</label>
+                    <input type="text" class="form-control" id="novoModeloCodigoGerenciador" placeholder="Ex: SLM (3 letras)"
+                        maxlength="3" style="text-transform: uppercase">
+                    <small class="text-muted">Três letras para gerar código do produto</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalNovoModeloGerenciador()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarModeloDoGerenciador()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Cor embutido no gerenciador -->
+<div class="modal fade" id="modalNovaCorGerenciador" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-palette me-2"></i>
+                    Nova Cor
+                </h6>
+                <button type="button" class="btn-close btn-close-white" onclick="fecharModalNovaCorGerenciador()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="corEditandoIdGerenciador" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Nome da Cor *</label>
+                    <input type="text" class="form-control" id="novaCorNomeGerenciador"
+                        placeholder="Ex: Vermelho, Azul Marinho" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Código da Cor</label>
+                    <div class="input-group">
+                        <input type="color" class="form-control form-control-color" id="novaCorHexadecimalGerenciador"
+                            value="#0d6efd" title="Escolha a cor">
+                        <input type="text" class="form-control" id="novaCorHexGerenciador" placeholder="#0d6efd" maxlength="7">
+                    </div>
+                    <small class="text-muted">Clique no quadrado ou digite o código hexadecimal</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalNovaCorGerenciador()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarCorDoGerenciador()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Tamanho embutido no gerenciador -->
+<div class="modal fade" id="modalNovoTamanhoGerenciador" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-rulers me-2"></i>
+                    Novo Tamanho
+                </h6>
+                <button type="button" class="btn-close" onclick="fecharModalNovoTamanhoGerenciador()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tamanhoEditandoIdGerenciador" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Tamanho/Número *</label>
+                    <input type="text" class="form-control" id="novoTamanhoValorGerenciador"
+                        placeholder="Ex: 37, 42, Único" autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Categoria</label>
+                    <select class="form-select" id="novoTamanhoCategoriaGerenciador">
+                        <option value="Adulto">Adulto</option>
+                        <option value="Infantil">Infantil</option>
+                        <option value="Único">Único/Tamanho Único</option>
+                    </select>
+                    <small class="text-muted">Para organização no sistema</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalNovoTamanhoGerenciador()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarTamanhoDoGerenciador()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Localização embutido no gerenciador -->
+<div class="modal fade" id="modalNovaLocalizacaoGerenciador" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-geo-alt me-2"></i>
+                    Nova Localização
+                </h6>
+                <button type="button" class="btn-close btn-close-white" onclick="fecharModalNovaLocalizacaoGerenciador()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="localizacaoEditandoIdGerenciador" value="">
+                <div class="mb-3">
+                    <label class="form-label small">Código da Localização *</label>
+                    <input type="text" class="form-control" id="novaLocalizacaoCodigoGerenciador"
+                        placeholder="Ex: PRATELEIRA-A1, CAIXA-01" autofocus style="text-transform: uppercase">
+                    <small class="text-muted">Use um código identificador (ex: PRATELEIRA-A1)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Descrição (opcional)</label>
+                    <input type="text" class="form-control" id="novaLocalizacaoDescricaoGerenciador"
+                        placeholder="Ex: Prateleira A, Corredor Central">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Tipo</label>
+                    <select class="form-select" id="novaLocalizacaoTipoGerenciador">
+                        <option value="PRATELEIRA">Prateleira</option>
+                        <option value="CAIXA">Caixa</option>
+                        <option value="ESTOQUE">Área de Estoque</option>
+                        <option value="VITRINE">Vitrine</option>
+                        <option value="OUTRO">Outro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalNovaLocalizacaoGerenciador()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="salvarLocalizacaoDoGerenciador()">
+                    <i class="bi bi-check-circle me-1"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Exclusão do Produto -->
+<div class="modal fade" id="modalExcluirProduto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Excluir Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                </div>
+                <p>Deseja excluir permanentemente o produto:</p>
+                <div class="alert alert-warning">
+                    <strong>{{ produto.descricao }}</strong><br>
+                    SKU: {{ produto.sku }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('excluir_produto', id=produto.id) }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i> Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ========== VARIÁVEIS GLOBAIS ==========
+let gradeCount = 0;
+let timerLeitor = null;
+let bufferLeitor = "";
+let timerBusca = null;
+
+// 🔥 VARIÁVEIS PARA CADASTRO DINÂMICO (AGORA VINDO DO BACKEND) 🔥
+let modelosCadastrados = [];
+let coresCadastradas = [];
+let tamanhosCadastrados = [];
+let localizacoesCadastradas = [];
+
+// Variáveis para controlar edição
+let editandoModeloId = null;
+let editandoCorId = null;
+let editandoTamanhoId = null;
+let editandoLocalizacaoId = null;
+
+// Dados das grades existentes (carregados do backend)
+const gradesExistentes = [
+    {% for grade in produto.grades %}
+    {
+        id: {{ grade.id }},
+        cor: "{{ grade.cor }}",
+        tamanho: "{{ grade.tamanho }}",
+        estoque: {{ grade.estoque_atual }},
+        estoque_minimo: {{ grade.estoque_minimo }},
+        estoque_maximo: {{ grade.estoque_maximo }},
+        localizacao: "{{ grade.localizacao or '' }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// ========== FUNÇÕES PARA CARREGAR DADOS DO BACKEND ==========
+async function carregarDadosBackend() {
+    console.log("🔧 Carregando dados do backend para edição...");
+    
+    try {
+        // Carregar modelos
+        const responseModelos = await fetch('/api/modelos');
+        if (responseModelos.ok) {
+            modelosCadastrados = await responseModelos.json();
+            console.log(`✅ ${modelosCadastrados.length} modelos carregados`);
+        } else {
+            console.log("⚠️ Erro ao carregar modelos, usando lista vazia");
+            modelosCadastrados = [];
+        }
+    } catch (error) {
+        console.error("❌ Erro ao carregar modelos:", error);
+        modelosCadastrados = [];
+    }
+    
+    try {
+        // Carregar cores
+        const responseCores = await fetch('/api/cores');
+        if (responseCores.ok) {
+            coresCadastradas = await responseCores.json();
+            console.log(`✅ ${coresCadastradas.length} cores carregadas`);
+        } else {
+            console.log("⚠️ Erro ao carregar cores, usando lista vazia");
+            coresCadastradas = [];
+        }
+    } catch (error) {
+        console.error("❌ Erro ao carregar cores:", error);
+        coresCadastradas = [];
+    }
+    
+    try {
+        // Carregar tamanhos
+        const responseTamanhos = await fetch('/api/tamanhos');
+        if (responseTamanhos.ok) {
+            tamanhosCadastrados = await responseTamanhos.json();
+            console.log(`✅ ${tamanhosCadastrados.length} tamanhos carregados`);
+        } else {
+            console.log("⚠️ Erro ao carregar tamanhos, usando lista vazia");
+            tamanhosCadastrados = [];
+        }
+    } catch (error) {
+        console.error("❌ Erro ao carregar tamanhos:", error);
+        tamanhosCadastrados = [];
+    }
+    
+    try {
+        // Carregar localizações
+        const responseLocalizacoes = await fetch('/api/localizacoes');
+        if (responseLocalizacoes.ok) {
+            localizacoesCadastradas = await responseLocalizacoes.json();
+            console.log(`✅ ${localizacoesCadastradas.length} localizações carregadas`);
+        } else {
+            console.log("⚠️ Erro ao carregar localizações, usando lista vazia");
+            localizacoesCadastradas = [];
+        }
+    } catch (error) {
+        console.error("❌ Erro ao carregar localizações:", error);
+        localizacoesCadastradas = [];
+    }
+
+    console.log("🎯 Dados totais carregados:");
+    console.log(`   - Modelos: ${modelosCadastrados.length}`);
+    console.log(`   - Cores: ${coresCadastradas.length}`);
+    console.log(`   - Tamanhos: ${tamanhosCadastrados.length}`);
+    console.log(`   - Localizações: ${localizacoesCadastradas.length}`);
+    
+    // 🔥 ATUALIZAR TODOS OS SELECTS 🔥
+    atualizarSelectModelos();
+    atualizarSelectCores();
+    atualizarSelectTamanhos();
+    atualizarSelectLocalizacoes();
+}
+
+// ========== FUNÇÕES PARA MODELOS ==========
+async function salvarModelo(nome, codigo, id = null) {
+    try {
+        const url = id ? `/api/modelos/${id}` : '/api/modelos';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, codigo })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback(id ? 'Modelo atualizado!' : 'Modelo cadastrado!', 'success');
+            await carregarDadosBackend(); // Recarregar dados
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao salvar modelo', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+async function excluirModelo(id) {
+    try {
+        const response = await fetch(`/api/modelos/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback('Modelo excluído!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao excluir modelo', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+// ========== FUNÇÕES PARA CORES ==========
+async function salvarCor(nome, hex, id = null) {
+    try {
+        const url = id ? `/api/cores/${id}` : '/api/cores';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome, hex })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback(id ? 'Cor atualizada!' : 'Cor cadastrada!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao salvar cor', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+async function excluirCor(id) {
+    try {
+        const response = await fetch(`/api/cores/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback('Cor excluída!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao excluir cor', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+// ========== FUNÇÕES PARA TAMANHOS ==========
+async function salvarTamanho(valor, categoria, id = null) {
+    try {
+        const url = id ? `/api/tamanhos/${id}` : '/api/tamanhos';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ valor, categoria })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback(id ? 'Tamanho atualizado!' : 'Tamanho cadastrado!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao salvar tamanho', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+async function excluirTamanho(id) {
+    try {
+        const response = await fetch(`/api/tamanhos/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback('Tamanho excluído!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao excluir tamanho', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+// ========== FUNÇÕES PARA LOCALIZAÇÕES ==========
+async function salvarLocalizacao(codigo, descricao, tipo, id = null) {
+    try {
+        const url = id ? `/api/localizacoes/${id}` : '/api/localizacoes';
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, descricao, tipo })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback(id ? 'Localização atualizada!' : 'Localização cadastrada!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao salvar localização', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+async function excluirLocalizacao(id) {
+    try {
+        const response = await fetch(`/api/localizacoes/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarFeedback('Localização excluída!', 'success');
+            await carregarDadosBackend();
+            return true;
+        } else {
+            mostrarFeedback(data.error || 'Erro ao excluir localização', 'danger');
+            return false;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarFeedback('Erro ao conectar com o servidor', 'danger');
+        return false;
+    }
+}
+
+// ========== FUNÇÕES PARA ATUALIZAR SELECTS 🔥
+function atualizarSelectModelos() {
+    const selectModelo = document.getElementById('modelo');
+    if (!selectModelo) return;
+    
+    // Salvar valor atual do produto
+    const modeloAtual = "{{ produto.modelo }}";
+    
+    // Limpar e recriar opções
+    selectModelo.innerHTML = '<option value="">Selecione...</option>';
+    
+    // Adicionar todos os modelos
+    modelosCadastrados.forEach(modelo => {
+        const option = document.createElement('option');
+        option.value = modelo.nome;
+        option.textContent = modelo.nome;
+        selectModelo.appendChild(option);
+    });
+    
+    // Restaurar valor do produto
+    if (modeloAtual) {
+        selectModelo.value = modeloAtual;
+    }
+}
+
+function atualizarSelectCores() {
+    const selectsCor = document.querySelectorAll('.grade-cor');
+    if (!selectsCor.length) return;
+    
+    selectsCor.forEach(select => {
+        // Salvar valor atual
+        const valorAtual = select.value;
+        
+        // Limpar e recriar opções
+        select.innerHTML = '<option value="">Selecione...</option>';
+        
+        // Adicionar todas as cores
+        coresCadastradas.forEach(cor => {
+            const option = document.createElement('option');
+            option.value = cor.nome;
+            option.textContent = cor.nome;
+            select.appendChild(option);
+        });
+        
+        // Restaurar valor anterior
+        if (valorAtual && Array.from(select.options).some(opt => opt.value === valorAtual)) {
+            select.value = valorAtual;
+        }
+    });
+}
+
+function atualizarSelectTamanhos() {
+    const selectsTamanho = document.querySelectorAll('.grade-tamanho');
+    if (!selectsTamanho.length) return;
+    
+    selectsTamanho.forEach(select => {
+        // Salvar valor atual
+        const valorAtual = select.value;
+        
+        // Limpar e recriar opções
+        select.innerHTML = '<option value="">Selecione...</option>';
+        
+        // Organizar tamanhos por categoria
+        const tamanhosAdulto = tamanhosCadastrados.filter(t => t.categoria === 'Adulto');
+        const tamanhosInfantil = tamanhosCadastrados.filter(t => t.categoria === 'Infantil');
+        const tamanhosUnico = tamanhosCadastrados.filter(t => t.categoria === 'Único');
+        
+        // Adicionar tamanhos adultos
+        if (tamanhosAdulto.length > 0) {
+            const optgroupAdulto = document.createElement('optgroup');
+            optgroupAdulto.label = 'Adulto';
+            tamanhosAdulto.forEach(tamanho => {
+                const option = document.createElement('option');
+                option.value = tamanho.valor;
+                option.textContent = tamanho.valor;
+                optgroupAdulto.appendChild(option);
+            });
+            select.appendChild(optgroupAdulto);
+        }
+        
+        // Adicionar tamanhos infantis
+        if (tamanhosInfantil.length > 0) {
+            const optgroupInfantil = document.createElement('optgroup');
+            optgroupInfantil.label = 'Infantil';
+            tamanhosInfantil.forEach(tamanho => {
+                const option = document.createElement('option');
+                option.value = tamanho.valor;
+                option.textContent = tamanho.valor;
+                optgroupInfantil.appendChild(option);
+            });
+            select.appendChild(optgroupInfantil);
+        }
+        
+        // Adicionar tamanho único
+        if (tamanhosUnico.length > 0) {
+            const optgroupUnico = document.createElement('optgroup');
+            optgroupUnico.label = 'Único';
+            tamanhosUnico.forEach(tamanho => {
+                const option = document.createElement('option');
+                option.value = tamanho.valor;
+                option.textContent = tamanho.valor;
+                optgroupUnico.appendChild(option);
+            });
+            select.appendChild(optgroupUnico);
+        }
+        
+        // Restaurar valor anterior
+        if (valorAtual && Array.from(select.options).some(opt => opt.value === valorAtual)) {
+            select.value = valorAtual;
+        }
+    });
+}
+
+function atualizarSelectLocalizacoes() {
+    const selectsLocalizacao = document.querySelectorAll('.grade-localizacao');
+    if (!selectsLocalizacao.length) return;
+    
+    selectsLocalizacao.forEach(select => {
+        // Salvar valor atual
+        const valorAtual = select.value;
+        
+        // Limpar e recriar opções
+        select.innerHTML = '<option value="">Selecione...</option>';
+        
+        // Adicionar todas as localizações
+        localizacoesCadastradas.forEach(localizacao => {
+            const option = document.createElement('option');
+            option.value = localizacao.codigo;
+            option.textContent = localizacao.descricao || localizacao.codigo;
+            select.appendChild(option);
+        });
+        
+        // Restaurar valor anterior
+        if (valorAtual && Array.from(select.options).some(opt => opt.value === valorAtual)) {
+            select.value = valorAtual;
+        }
+    });
+}
+
+// ========== FUNÇÕES PARA MODAIS DO FORMULÁRIO PRINCIPAL ==========
+function abrirModalNovoModelo() {
+    editandoModeloId = null;
+    document.getElementById("modeloEditandoId").value = "";
+    document.getElementById("novoModeloNome").value = "";
+    document.getElementById("novoModeloCodigo").value = "";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoModelo"));
+    modal.show();
+}
+
+async function salvarModeloDoFormulario() {
+    const id = document.getElementById("modeloEditandoId").value;
+    const nome = document.getElementById("novoModeloNome").value.trim();
+    const codigo = document.getElementById("novoModeloCodigo").value.trim().toUpperCase();
+
+    if (!nome) {
+        mostrarFeedback("Digite o nome do modelo!", "warning");
+        document.getElementById("novoModeloNome").focus();
+        return;
+    }
+
+    const sucesso = await salvarModelo(nome, codigo, id || null);
+    
+    if (sucesso) {
+        bootstrap.Modal.getInstance(document.getElementById("modalNovoModelo")).hide();
+        document.getElementById("modeloEditandoId").value = "";
+        document.getElementById("novoModeloNome").value = "";
+        document.getElementById("novoModeloCodigo").value = "";
+    }
+}
+
+function abrirModalNovaCor(event) {
+    if (event) event.stopPropagation();
+    
+    editandoCorId = null;
+    document.getElementById("corEditandoId").value = "";
+    document.getElementById("novaCorNome").value = "";
+    document.getElementById("novaCorHex").value = "#0d6efd";
+    document.getElementById("novaCorHexadecimal").value = "#0d6efd";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaCor"));
+    modal.show();
+}
+
+async function salvarCorDoFormulario() {
+    const id = document.getElementById("corEditandoId").value;
+    const nome = document.getElementById("novaCorNome").value.trim();
+    let hex = document.getElementById("novaCorHex").value.trim();
+
+    if (!nome) {
+        mostrarFeedback("Digite o nome da cor!", "warning");
+        document.getElementById("novaCorNome").focus();
+        return;
+    }
+
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (hex.length !== 7) hex = '#6c757d';
+
+    const sucesso = await salvarCor(nome, hex, id || null);
+    
+    if (sucesso) {
+        bootstrap.Modal.getInstance(document.getElementById("modalNovaCor")).hide();
+        document.getElementById("corEditandoId").value = "";
+        document.getElementById("novaCorNome").value = "";
+        document.getElementById("novaCorHex").value = "#0d6efd";
+        document.getElementById("novaCorHexadecimal").value = "#0d6efd";
+    }
+}
+
+function abrirModalNovoTamanho(event) {
+    if (event) event.stopPropagation();
+    
+    editandoTamanhoId = null;
+    document.getElementById("tamanhoEditandoId").value = "";
+    document.getElementById("novoTamanhoValor").value = "";
+    document.getElementById("novoTamanhoCategoria").value = "Adulto";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoTamanho"));
+    modal.show();
+}
+
+async function salvarTamanhoDoFormulario() {
+    const id = document.getElementById("tamanhoEditandoId").value;
+    const valor = document.getElementById("novoTamanhoValor").value.trim();
+    const categoria = document.getElementById("novoTamanhoCategoria").value;
+
+    if (!valor) {
+        mostrarFeedback("Digite o valor do tamanho!", "warning");
+        document.getElementById("novoTamanhoValor").focus();
+        return;
+    }
+
+    const sucesso = await salvarTamanho(valor, categoria, id || null);
+    
+    if (sucesso) {
+        bootstrap.Modal.getInstance(document.getElementById("modalNovoTamanho")).hide();
+        document.getElementById("tamanhoEditandoId").value = "";
+        document.getElementById("novoTamanhoValor").value = "";
+        document.getElementById("novoTamanhoCategoria").value = "Adulto";
+    }
+}
+
+function abrirModalNovaLocalizacao(event) {
+    if (event) event.stopPropagation();
+
+    editandoLocalizacaoId = null;
+    document.getElementById("localizacaoEditandoId").value = "";
+    document.getElementById("novaLocalizacaoCodigo").value = "";
+    document.getElementById("novaLocalizacaoDescricao").value = "";
+    document.getElementById("novaLocalizacaoTipo").value = "PRATELEIRA";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaLocalizacao"));
+    modal.show();
+}
+
+async function salvarLocalizacaoDoFormulario() {
+    const id = document.getElementById("localizacaoEditandoId").value;
+    const codigo = document.getElementById("novaLocalizacaoCodigo").value.trim().toUpperCase();
+    const descricao = document.getElementById("novaLocalizacaoDescricao").value.trim();
+    const tipo = document.getElementById("novaLocalizacaoTipo").value;
+
+    if (!codigo) {
+        mostrarFeedback("Digite o código da localização!", "warning");
+        document.getElementById("novaLocalizacaoCodigo").focus();
+        return;
+    }
+
+    if (codigo.length < 3) {
+        mostrarFeedback("O código deve ter pelo menos 3 caracteres!", "warning");
+        document.getElementById("novaLocalizacaoCodigo").focus();
+        return;
+    }
+
+    const sucesso = await salvarLocalizacao(codigo, descricao, tipo, id || null);
+    
+    if (sucesso) {
+        bootstrap.Modal.getInstance(document.getElementById("modalNovaLocalizacao")).hide();
+        document.getElementById("localizacaoEditandoId").value = "";
+        document.getElementById("novaLocalizacaoCodigo").value = "";
+        document.getElementById("novaLocalizacaoDescricao").value = "";
+        document.getElementById("novaLocalizacaoTipo").value = "PRATELEIRA";
+    }
+}
+
+// ========== FUNÇÕES PARA MODAIS DO GERENCIADOR ==========
+function abrirModalNovoModeloDoGerenciador() {
+    editandoModeloId = null;
+    document.getElementById("modeloEditandoIdGerenciador").value = "";
+    document.getElementById("novoModeloNomeGerenciador").value = "";
+    document.getElementById("novoModeloCodigoGerenciador").value = "";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoModeloGerenciador"));
+    modal.show();
+}
+
+function fecharModalNovoModeloGerenciador() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalNovoModeloGerenciador"));
+    modal.hide();
+}
+
+async function salvarModeloDoGerenciador() {
+    const id = document.getElementById("modeloEditandoIdGerenciador").value;
+    const nome = document.getElementById("novoModeloNomeGerenciador").value.trim();
+    const codigo = document.getElementById("novoModeloCodigoGerenciador").value.trim().toUpperCase();
+
+    if (!nome) {
+        mostrarFeedback("Digite o nome do modelo!", "warning");
+        document.getElementById("novoModeloNomeGerenciador").focus();
+        return;
+    }
+
+    const sucesso = await salvarModelo(nome, codigo, id || null);
+    
+    if (sucesso) {
+        fecharModalNovoModeloGerenciador();
+        carregarListaModelos();
+        document.getElementById("modeloEditandoIdGerenciador").value = "";
+        document.getElementById("novoModeloNomeGerenciador").value = "";
+        document.getElementById("novoModeloCodigoGerenciador").value = "";
+    }
+}
+
+function abrirModalNovaCorDoGerenciador(event) {
+    if (event) event.stopPropagation();
+    
+    editandoCorId = null;
+    document.getElementById("corEditandoIdGerenciador").value = "";
+    document.getElementById("novaCorNomeGerenciador").value = "";
+    document.getElementById("novaCorHexGerenciador").value = "#0d6efd";
+    document.getElementById("novaCorHexadecimalGerenciador").value = "#0d6efd";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaCorGerenciador"));
+    modal.show();
+}
+
+function fecharModalNovaCorGerenciador() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalNovaCorGerenciador"));
+    modal.hide();
+}
+
+async function salvarCorDoGerenciador() {
+    const id = document.getElementById("corEditandoIdGerenciador").value;
+    const nome = document.getElementById("novaCorNomeGerenciador").value.trim();
+    let hex = document.getElementById("novaCorHexGerenciador").value.trim();
+
+    if (!nome) {
+        mostrarFeedback("Digite o nome da cor!", "warning");
+        document.getElementById("novaCorNomeGerenciador").focus();
+        return;
+    }
+
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (hex.length !== 7) hex = '#6c757d';
+
+    const sucesso = await salvarCor(nome, hex, id || null);
+    
+    if (sucesso) {
+        fecharModalNovaCorGerenciador();
+        carregarListaCores();
+        document.getElementById("corEditandoIdGerenciador").value = "";
+        document.getElementById("novaCorNomeGerenciador").value = "";
+        document.getElementById("novaCorHexGerenciador").value = "#0d6efd";
+        document.getElementById("novaCorHexadecimalGerenciador").value = "#0d6efd";
+    }
+}
+
+function abrirModalNovoTamanhoDoGerenciador(event) {
+    if (event) event.stopPropagation();
+    
+    editandoTamanhoId = null;
+    document.getElementById("tamanhoEditandoIdGerenciador").value = "";
+    document.getElementById("novoTamanhoValorGerenciador").value = "";
+    document.getElementById("novoTamanhoCategoriaGerenciador").value = "Adulto";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoTamanhoGerenciador"));
+    modal.show();
+}
+
+function fecharModalNovoTamanhoGerenciador() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalNovoTamanhoGerenciador"));
+    modal.hide();
+}
+
+async function salvarTamanhoDoGerenciador() {
+    const id = document.getElementById("tamanhoEditandoIdGerenciador").value;
+    const valor = document.getElementById("novoTamanhoValorGerenciador").value.trim();
+    const categoria = document.getElementById("novoTamanhoCategoriaGerenciador").value;
+
+    if (!valor) {
+        mostrarFeedback("Digite o valor do tamanho!", "warning");
+        document.getElementById("novoTamanhoValorGerenciador").focus();
+        return;
+    }
+
+    const sucesso = await salvarTamanho(valor, categoria, id || null);
+    
+    if (sucesso) {
+        fecharModalNovoTamanhoGerenciador();
+        carregarListaTamanhos();
+        document.getElementById("tamanhoEditandoIdGerenciador").value = "";
+        document.getElementById("novoTamanhoValorGerenciador").value = "";
+        document.getElementById("novoTamanhoCategoriaGerenciador").value = "Adulto";
+    }
+}
+
+function abrirModalNovaLocalizacaoDoGerenciador(event) {
+    if (event) event.stopPropagation();
+
+    editandoLocalizacaoId = null;
+    document.getElementById("localizacaoEditandoIdGerenciador").value = "";
+    document.getElementById("novaLocalizacaoCodigoGerenciador").value = "";
+    document.getElementById("novaLocalizacaoDescricaoGerenciador").value = "";
+    document.getElementById("novaLocalizacaoTipoGerenciador").value = "PRATELEIRA";
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaLocalizacaoGerenciador"));
+    modal.show();
+}
+
+function fecharModalNovaLocalizacaoGerenciador() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalNovaLocalizacaoGerenciador"));
+    modal.hide();
+}
+
+async function salvarLocalizacaoDoGerenciador() {
+    const id = document.getElementById("localizacaoEditandoIdGerenciador").value;
+    const codigo = document.getElementById("novaLocalizacaoCodigoGerenciador").value.trim().toUpperCase();
+    const descricao = document.getElementById("novaLocalizacaoDescricaoGerenciador").value.trim();
+    const tipo = document.getElementById("novaLocalizacaoTipoGerenciador").value;
+
+    if (!codigo) {
+        mostrarFeedback("Digite o código da localização!", "warning");
+        document.getElementById("novaLocalizacaoCodigoGerenciador").focus();
+        return;
+    }
+
+    if (codigo.length < 3) {
+        mostrarFeedback("O código deve ter pelo menos 3 caracteres!", "warning");
+        document.getElementById("novaLocalizacaoCodigoGerenciador").focus();
+        return;
+    }
+
+    const sucesso = await salvarLocalizacao(codigo, descricao, tipo, id || null);
+    
+    if (sucesso) {
+        fecharModalNovaLocalizacaoGerenciador();
+        carregarListaLocalizacoes();
+        document.getElementById("localizacaoEditandoIdGerenciador").value = "";
+        document.getElementById("novaLocalizacaoCodigoGerenciador").value = "";
+        document.getElementById("novaLocalizacaoDescricaoGerenciador").value = "";
+        document.getElementById("novaLocalizacaoTipoGerenciador").value = "PRATELEIRA";
+    }
+}
+
+// 🔥 FUNÇÕES PARA GERENCIADORES 🔥
+function abrirGerenciadorModelos() {
+    carregarListaModelos();
+    const modal = new bootstrap.Modal(document.getElementById("modalGerenciadorModelos"));
+    modal.show();
+}
+
+function abrirGerenciadorCores() {
+    carregarListaCores();
+    const modal = new bootstrap.Modal(document.getElementById("modalGerenciadorCores"));
+    modal.show();
+}
+
+function abrirGerenciadorTamanhos() {
+    carregarListaTamanhos();
+    const modal = new bootstrap.Modal(document.getElementById("modalGerenciadorTamanhos"));
+    modal.show();
+}
+
+function abrirGerenciadorLocalizacoes() {
+    carregarListaLocalizacoes();
+    const modal = new bootstrap.Modal(document.getElementById("modalGerenciadorLocalizacoes"));
+    modal.show();
+}
+
+// 🔥 FUNÇÕES PARA CARREGAR LISTAS NOS GERENCIADORES 🔥
+function carregarListaModelos() {
+    const tbody = document.getElementById("listaModelos");
+    const semModelos = document.getElementById("semModelos");
+
+    if (modelosCadastrados.length === 0) {
+        tbody.innerHTML = "";
+        semModelos.style.display = "block";
+        atualizarContador("modelos", 0);
+        return;
+    }
+
+    semModelos.style.display = "none";
+    let html = "";
+
+    modelosCadastrados.forEach((modelo) => {
+        const dataFormatada = formatarData(modelo.dataCadastro);
+
+        html += `
+            <tr id="modelo-row-${modelo.id}">
+                <td>
+                    <input type="checkbox" class="selecionar-item" data-tipo="modelo" data-id="${modelo.id}" 
+                           onchange="atualizarContador('modelos')">
+                </td>
+                <td>
+                    <div class="fw-medium">${modelo.nome}</div>
+                </td>
+                <td>
+                    <span class="badge bg-secondary">${modelo.codigo || "N/A"}</span>
+                </td>
+                <td>
+                    <small class="text-muted">${dataFormatada}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-warning btn-sm" 
+                                onclick="abrirEdicaoModeloDoGerenciador(${modelo.id})" 
+                                title="Editar modelo">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="excluirModeloIndividual(${modelo.id})" 
+                                title="Excluir modelo">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById("filtroModelos").value = "";
+    atualizarContador("modelos", 0);
+}
+
+function abrirEdicaoModeloDoGerenciador(id) {
+    const modelo = modelosCadastrados.find(m => m.id === id);
+    if (!modelo) return;
+    
+    editandoModeloId = id;
+    document.getElementById("modeloEditandoIdGerenciador").value = id;
+    document.getElementById("novoModeloNomeGerenciador").value = modelo.nome;
+    document.getElementById("novoModeloCodigoGerenciador").value = modelo.codigo;
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoModeloGerenciador"));
+    modal.show();
+}
+
+async function excluirModeloIndividual(id) {
+    const modelo = modelosCadastrados.find(m => m.id === id);
+    if (!modelo) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir o modelo "${modelo.nome}"?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+    
+    // Verificar se o modelo está sendo usado no formulário atual
+    const modeloAtual = document.getElementById("modelo").value;
+    if (modeloAtual === modelo.nome) {
+        mostrarFeedback("Não é possível excluir um modelo que está sendo usado no formulário atual!", "warning");
+        return;
+    }
+    
+    await excluirModelo(id);
+    carregarListaModelos();
+}
+
+function carregarListaCores() {
+    const tbody = document.getElementById("listaCores");
+    const semCores = document.getElementById("semCores");
+
+    if (coresCadastradas.length === 0) {
+        tbody.innerHTML = "";
+        semCores.style.display = "block";
+        atualizarContador("cores", 0);
+        return;
+    }
+
+    semCores.style.display = "none";
+    let html = "";
+
+    coresCadastradas.forEach((cor) => {
+        const dataFormatada = formatarData(cor.dataCadastro);
+
+        html += `
+            <tr id="cor-row-${cor.id}">
+                <td>
+                    <input type="checkbox" class="selecionar-item" data-tipo="cor" data-id="${cor.id}" 
+                           onchange="atualizarContador('cores')">
+                </td>
+                <td>
+                    <div class="fw-medium">${cor.nome}</div>
+                </td>
+                <td>
+                    <code>${cor.hex}</code>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded me-2" style="width: 24px; height: 24px; background-color: ${cor.hex}; border: 1px solid #ddd;"></div>
+                        <small>${cor.hex}</small>
+                    </div>
+                </td>
+                <td>
+                    <small class="text-muted">${dataFormatada}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-warning btn-sm" 
+                                onclick="abrirEdicaoCorDoGerenciador(${cor.id})" 
+                                title="Editar cor">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="excluirCorIndividual(${cor.id})" 
+                                title="Excluir cor">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById("filtroCores").value = "";
+    atualizarContador("cores", 0);
+}
+
+function abrirEdicaoCorDoGerenciador(id) {
+    const cor = coresCadastradas.find(c => c.id === id);
+    if (!cor) return;
+    
+    editandoCorId = id;
+    document.getElementById("corEditandoIdGerenciador").value = id;
+    document.getElementById("novaCorNomeGerenciador").value = cor.nome;
+    document.getElementById("novaCorHexGerenciador").value = cor.hex;
+    document.getElementById("novaCorHexadecimalGerenciador").value = cor.hex;
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaCorGerenciador"));
+    modal.show();
+}
+
+async function excluirCorIndividual(id) {
+    const cor = coresCadastradas.find(c => c.id === id);
+    if (!cor) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir a cor "${cor.nome}"?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+    
+    // Verificar se a cor está sendo usada no formulário atual
+    const coresSelecionadas = document.querySelectorAll(".grade-cor");
+    let corEmUso = false;
+    
+    coresSelecionadas.forEach((select) => {
+        if (select.value === cor.nome) {
+            corEmUso = true;
+        }
+    });
+    
+    if (corEmUso) {
+        mostrarFeedback("Não é possível excluir uma cor que está sendo usada no formulário atual!", "warning");
+        return;
+    }
+    
+    await excluirCor(id);
+    carregarListaCores();
+}
+
+function carregarListaTamanhos() {
+    const tbody = document.getElementById("listaTamanhos");
+    const semTamanhos = document.getElementById("semTamanhos");
+
+    if (tamanhosCadastrados.length === 0) {
+        tbody.innerHTML = "";
+        semTamanhos.style.display = "block";
+        atualizarContador("tamanhos", 0);
+        return;
+    }
+
+    semTamanhos.style.display = "none";
+    let html = "";
+
+    tamanhosCadastrados.forEach((tamanho) => {
+        const dataFormatada = formatarData(tamanho.dataCadastro);
+
+        html += `
+            <tr id="tamanho-row-${tamanho.id}">
+                <td>
+                    <input type="checkbox" class="selecionar-item" data-tipo="tamanho" data-id="${tamanho.id}" 
+                           onchange="atualizarContador('tamanhos')">
+                </td>
+                <td>
+                    <div class="fw-medium">${tamanho.valor}</div>
+                </td>
+                <td>
+                    <span class="badge ${getBadgeCategoria(tamanho.categoria)}">
+                        ${tamanho.categoria}
+                    </span>
+                </td>
+                <td>
+                    <small class="text-muted">${dataFormatada}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-warning btn-sm" 
+                                onclick="abrirEdicaoTamanhoDoGerenciador(${tamanho.id})" 
+                                title="Editar tamanho">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="excluirTamanhoIndividual(${tamanho.id})" 
+                                title="Excluir tamanho">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById("filtroTamanhos").value = "";
+    atualizarContador("tamanhos", 0);
+}
+
+function abrirEdicaoTamanhoDoGerenciador(id) {
+    const tamanho = tamanhosCadastrados.find(t => t.id === id);
+    if (!tamanho) return;
+    
+    editandoTamanhoId = id;
+    document.getElementById("tamanhoEditandoIdGerenciador").value = id;
+    document.getElementById("novoTamanhoValorGerenciador").value = tamanho.valor;
+    document.getElementById("novoTamanhoCategoriaGerenciador").value = tamanho.categoria;
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovoTamanhoGerenciador"));
+    modal.show();
+}
+
+async function excluirTamanhoIndividual(id) {
+    const tamanho = tamanhosCadastrados.find(t => t.id === id);
+    if (!tamanho) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir o tamanho "${tamanho.valor}"?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+    
+    // Verificar se o tamanho está sendo usado no formulário atual
+    const tamanhosSelecionados = document.querySelectorAll(".grade-tamanho");
+    let tamanhoEmUso = false;
+    
+    tamanhosSelecionados.forEach((select) => {
+        if (select.value === tamanho.valor) {
+            tamanhoEmUso = true;
+        }
+    });
+    
+    if (tamanhoEmUso) {
+        mostrarFeedback("Não é possível excluir um tamanho que está sendo usado no formulário atual!", "warning");
+        return;
+    }
+    
+    await excluirTamanho(id);
+    carregarListaTamanhos();
+}
+
+function carregarListaLocalizacoes() {
+    const tbody = document.getElementById("listaLocalizacoes");
+    const semLocalizacoes = document.getElementById("semLocalizacoes");
+
+    if (localizacoesCadastradas.length === 0) {
+        tbody.innerHTML = "";
+        semLocalizacoes.style.display = "block";
+        atualizarContador("localizacoes", 0);
+        return;
+    }
+
+    semLocalizacoes.style.display = "none";
+    let html = "";
+
+    localizacoesCadastradas.forEach((localizacao) => {
+        const dataFormatada = formatarData(localizacao.dataCadastro);
+
+        html += `
+            <tr id="localizacao-row-${localizacao.id}">
+                <td>
+                    <input type="checkbox" class="selecionar-item" data-tipo="localizacao" data-id="${localizacao.id}" 
+                           onchange="atualizarContador('localizacoes')">
+                </td>
+                <td>
+                    <div class="fw-medium">${localizacao.codigo}</div>
+                </td>
+                <td>
+                    <div>${localizacao.descricao}</div>
+                </td>
+                <td>
+                    <span class="badge ${getBadgeTipoLocalizacao(localizacao.tipo)}">
+                        ${getTextoAbreviadoTipo(localizacao.tipo)}
+                    </span>
+                </td>
+                <td>
+                    <small class="text-muted">${dataFormatada}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-warning btn-sm" 
+                                onclick="abrirEdicaoLocalizacaoDoGerenciador(${localizacao.id})" 
+                                title="Editar localização">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="excluirLocalizacaoIndividual(${localizacao.id})" 
+                                title="Excluir localização">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById("filtroLocalizacoes").value = "";
+    atualizarContador("localizacoes", 0);
+}
+
+function abrirEdicaoLocalizacaoDoGerenciador(id) {
+    const localizacao = localizacoesCadastradas.find(l => l.id === id);
+    if (!localizacao) return;
+    
+    editandoLocalizacaoId = id;
+    document.getElementById("localizacaoEditandoIdGerenciador").value = id;
+    document.getElementById("novaLocalizacaoCodigoGerenciador").value = localizacao.codigo;
+    document.getElementById("novaLocalizacaoDescricaoGerenciador").value = localizacao.descricao;
+    document.getElementById("novaLocalizacaoTipoGerenciador").value = localizacao.tipo;
+    
+    const modal = new bootstrap.Modal(document.getElementById("modalNovaLocalizacaoGerenciador"));
+    modal.show();
+}
+
+async function excluirLocalizacaoIndividual(id) {
+    const localizacao = localizacoesCadastradas.find(l => l.id === id);
+    if (!localizacao) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir a localização "${localizacao.codigo}"?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+    
+    // Verificar se a localização está sendo usada no formulário atual
+    const localizacoesSelecionadas = document.querySelectorAll(".grade-localizacao");
+    let localizacaoEmUso = false;
+    
+    localizacoesSelecionadas.forEach((select) => {
+        if (select.value === localizacao.codigo) {
+            localizacaoEmUso = true;
+        }
+    });
+    
+    if (localizacaoEmUso) {
+        mostrarFeedback("Não é possível excluir uma localização que está sendo usada no formulário atual!", "warning");
+        return;
+    }
+    
+    await excluirLocalizacao(id);
+    carregarListaLocalizacoes();
+}
+
+// ========== FUNÇÃO SELECIONAR TODOS ==========
+function selecionarTodos(tipo) {
+    const selectAllCheckbox = document.getElementById(`selecionarTodos${capitalizeFirstLetter(tipo)}`);
+    if (!selectAllCheckbox) return;
+    
+    const isChecked = selectAllCheckbox.checked;
+    
+    let tabelaId = '';
+    if (tipo === 'modelos') tabelaId = 'listaModelos';
+    else if (tipo === 'cores') tabelaId = 'listaCores';
+    else if (tipo === 'tamanhos') tabelaId = 'listaTamanhos';
+    else if (tipo === 'localizacoes') tabelaId = 'listaLocalizacoes';
+    else return;
+    
+    const checkboxes = document.querySelectorAll(`#${tabelaId} .selecionar-item`);
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = isChecked;
+    });
+    
+    atualizarContador(tipo);
+}
+
+function atualizarContador(tipo) {
+    let tabelaId = '';
+    
+    if (tipo === 'modelos') tabelaId = 'listaModelos';
+    else if (tipo === 'cores') tabelaId = 'listaCores';
+    else if (tipo === 'tamanhos') tabelaId = 'listaTamanhos';
+    else if (tipo === 'localizacoes') tabelaId = 'listaLocalizacoes';
+    else return;
+    
+    const checkboxes = document.querySelectorAll(`#${tabelaId} .selecionar-item:checked`);
+    const contadorId = `contador${capitalizeFirstLetter(tipo)}`;
+    const contadorElement = document.getElementById(contadorId);
+
+    if (contadorElement) {
+        const texto = (tipo === 'cores' || tipo === 'localizacoes') ? 'selecionadas' : 'selecionados';
+        contadorElement.textContent = `${checkboxes.length} ${tipo} ${texto}`;
+    }
+}
+
+// 🔥 FUNÇÕES DE EXCLUSÃO EM MASSA 🔥
+async function excluirModelosSelecionados() {
+    const checkboxes = document.querySelectorAll('.selecionar-item[data-tipo="modelo"]:checked');
+
+    if (checkboxes.length === 0) {
+        mostrarFeedback("Selecione pelo menos um modelo para excluir!", "warning");
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} modelo(s) selecionado(s)?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+
+    const idsParaExcluir = [];
+    const nomesParaExcluir = [];
+
+    checkboxes.forEach((checkbox) => {
+        const id = parseInt(checkbox.getAttribute("data-id"));
+        const modelo = modelosCadastrados.find((m) => m.id === id);
+        if (modelo) {
+            idsParaExcluir.push(id);
+            nomesParaExcluir.push(modelo.nome);
+        }
+    });
+
+    // Verificar se algum modelo está sendo usado no formulário atual
+    const modeloAtual = document.getElementById("modelo").value;
+    const modelosEmUso = nomesParaExcluir.filter((nome) => nome === modeloAtual);
+
+    if (modelosEmUso.length > 0) {
+        mostrarFeedback("Não é possível excluir modelos que estão sendo usados no formulário atual!", "warning");
+        return;
+    }
+
+    for (const id of idsParaExcluir) {
+        await excluirModelo(id);
+    }
+    
+    carregarListaModelos();
+    mostrarFeedback(`${checkboxes.length} modelo(s) excluído(s) com sucesso!`, "success");
+}
+
+async function excluirCoresSelecionadas() {
+    const checkboxes = document.querySelectorAll('.selecionar-item[data-tipo="cor"]:checked');
+
+    if (checkboxes.length === 0) {
+        mostrarFeedback("Selecione pelo menos uma cor para excluir!", "warning");
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} cor(es) selecionada(s)?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+
+    const idsParaExcluir = [];
+    const nomesParaExcluir = [];
+
+    checkboxes.forEach((checkbox) => {
+        const id = parseInt(checkbox.getAttribute("data-id"));
+        const cor = coresCadastradas.find((c) => c.id === id);
+        if (cor) {
+            idsParaExcluir.push(id);
+            nomesParaExcluir.push(cor.nome);
+        }
+    });
+
+    // Verificar se alguma cor está sendo usada no formulário atual
+    const coresSelecionadas = document.querySelectorAll(".grade-cor");
+    let coresEmUso = [];
+
+    coresSelecionadas.forEach((select) => {
+        if (nomesParaExcluir.includes(select.value)) {
+            coresEmUso.push(select.value);
+        }
+    });
+
+    if (coresEmUso.length > 0) {
+        mostrarFeedback(`Não é possível excluir as cores: ${coresEmUso.join(", ")} porque estão sendo usadas no formulário atual!`, "warning");
+        return;
+    }
+
+    for (const id of idsParaExcluir) {
+        await excluirCor(id);
+    }
+    
+    carregarListaCores();
+    mostrarFeedback(`${checkboxes.length} cor(es) excluída(s) com sucesso!`, "success");
+}
+
+async function excluirTamanhosSelecionados() {
+    const checkboxes = document.querySelectorAll('.selecionar-item[data-tipo="tamanho"]:checked');
+
+    if (checkboxes.length === 0) {
+        mostrarFeedback("Selecione pelo menos um tamanho para excluir!", "warning");
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} tamanho(s) selecionado(s)?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+
+    const idsParaExcluir = [];
+    const valoresParaExcluir = [];
+
+    checkboxes.forEach((checkbox) => {
+        const id = parseInt(checkbox.getAttribute("data-id"));
+        const tamanho = tamanhosCadastrados.find((t) => t.id === id);
+        if (tamanho) {
+            idsParaExcluir.push(id);
+            valoresParaExcluir.push(tamanho.valor);
+        }
+    });
+
+    // Verificar se algum tamanho está sendo usado no formulário atual
+    const tamanhosSelecionados = document.querySelectorAll(".grade-tamanho");
+    let tamanhosEmUso = [];
+
+    tamanhosSelecionados.forEach((select) => {
+        if (valoresParaExcluir.includes(select.value)) {
+            tamanhosEmUso.push(select.value);
+        }
+    });
+
+    if (tamanhosEmUso.length > 0) {
+        mostrarFeedback(`Não é possível excluir os tamanhos: ${tamanhosEmUso.join(", ")} porque estão sendo usados no formulário atual!`, "warning");
+        return;
+    }
+
+    for (const id of idsParaExcluir) {
+        await excluirTamanho(id);
+    }
+    
+    carregarListaTamanhos();
+    mostrarFeedback(`${checkboxes.length} tamanho(s) excluído(s) com sucesso!`, "success");
+}
+
+async function excluirLocalizacoesSelecionadas() {
+    const checkboxes = document.querySelectorAll('.selecionar-item[data-tipo="localizacao"]:checked');
+
+    if (checkboxes.length === 0) {
+        mostrarFeedback("Selecione pelo menos uma localização para excluir!", "warning");
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} localização(ões) selecionada(s)?\n\nEsta ação não poderá ser desfeita!`)) {
+        return;
+    }
+
+    const idsParaExcluir = [];
+    const codigosParaExcluir = [];
+
+    checkboxes.forEach((checkbox) => {
+        const id = parseInt(checkbox.getAttribute("data-id"));
+        const localizacao = localizacoesCadastradas.find((l) => l.id === id);
+        if (localizacao) {
+            idsParaExcluir.push(id);
+            codigosParaExcluir.push(localizacao.codigo);
+        }
+    });
+
+    // Verificar se alguma localização está sendo usada no formulário atual
+    const localizacoesSelecionadas = document.querySelectorAll(".grade-localizacao");
+    let localizacoesEmUso = [];
+
+    localizacoesSelecionadas.forEach((select) => {
+        if (codigosParaExcluir.includes(select.value)) {
+            localizacoesEmUso.push(select.value);
+        }
+    });
+
+    if (localizacoesEmUso.length > 0) {
+        mostrarFeedback(`Não é possível excluir as localizações: ${localizacoesEmUso.join(", ")} porque estão sendo usadas no formulário atual!`, "warning");
+        return;
+    }
+
+    for (const id of idsParaExcluir) {
+        await excluirLocalizacao(id);
+    }
+    
+    carregarListaLocalizacoes();
+    mostrarFeedback(`${checkboxes.length} localização(ões) excluída(s) com sucesso!`, "success");
+}
+
+// 🔥 FUNÇÕES AUXILIARES 🔥
+function getBadgeCategoria(categoria) {
+    switch (categoria) {
+        case "Adulto":
+            return "bg-primary";
+        case "Infantil":
+            return "bg-info";
+        case "Único":
+            return "bg-warning text-dark";
+        default:
+            return "bg-secondary";
+    }
+}
+
+function getBadgeTipoLocalizacao(tipo) {
+    switch (tipo) {
+        case "PRATELEIRA":
+            return "bg-primary";
+        case "CAIXA":
+            return "bg-info";
+        case "ESTOQUE":
+            return "bg-warning text-dark";
+        case "VITRINE":
+            return "bg-success";
+        default:
+            return "bg-secondary";
+    }
+}
+
+function getTextoAbreviadoTipo(tipo) {
+    switch (tipo) {
+        case "PRATELEIRA":
+            return "Prat.";
+        case "CAIXA":
+            return "Caixa";
+        case "ESTOQUE":
+            return "Estoque";
+        case "VITRINE":
+            return "Vitrine";
+        default:
+            return "Outro";
+    }
+}
+
+function formatarData(dataString) {
+    if (!dataString) return "---";
+    try {
+        const data = new Date(dataString);
+        return (
+            data.toLocaleDateString("pt-BR") +
+            " " +
+            data.toLocaleTimeString("pt-BR").substring(0, 5)
+        );
+    } catch {
+        return dataString;
+    }
+}
+
+function capitalizeFirstLetter(string) {
+    if (string === 'cores') return 'Cores';
+    if (string === 'localizacoes') return 'Localizacoes';
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// 🔥 FUNÇÕES DE FILTRO NOS GERENCIADORES 🔥
+function filtrarListaModelos() {
+    const filtro = document.getElementById("filtroModelos").value.toLowerCase();
+    const linhas = document.querySelectorAll("#listaModelos tr");
+
+    linhas.forEach((linha) => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(filtro) ? "" : "none";
+    });
+
+    atualizarCheckboxSelecionarTodos("modelos");
+}
+
+function filtrarListaCores() {
+    const filtro = document.getElementById("filtroCores").value.toLowerCase();
+    const linhas = document.querySelectorAll("#listaCores tr");
+
+    linhas.forEach((linha) => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(filtro) ? "" : "none";
+    });
+
+    atualizarCheckboxSelecionarTodos("cores");
+}
+
+function filtrarListaTamanhos() {
+    const filtro = document.getElementById("filtroTamanhos").value.toLowerCase();
+    const linhas = document.querySelectorAll("#listaTamanhos tr");
+
+    linhas.forEach((linha) => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(filtro) ? "" : "none";
+    });
+
+    atualizarCheckboxSelecionarTodos("tamanhos");
+}
+
+function filtrarListaLocalizacoes() {
+    const filtro = document.getElementById("filtroLocalizacoes").value.toLowerCase();
+    const linhas = document.querySelectorAll("#listaLocalizacoes tr");
+
+    linhas.forEach((linha) => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(filtro) ? "" : "none";
+    });
+
+    atualizarCheckboxSelecionarTodos("localizacoes");
+}
+
+function atualizarCheckboxSelecionarTodos(tipo) {
+    const checkboxes = document.querySelectorAll(`.selecionar-item[data-tipo="${tipo}"]`);
+    const selectAllCheckbox = document.getElementById(`selecionarTodos${capitalizeFirstLetter(tipo)}`);
+
+    const checkboxesVisiveis = Array.from(checkboxes).filter((cb) => {
+        const linha = cb.closest("tr");
+        return linha && linha.style.display !== "none";
+    });
+
+    const todosMarcados = checkboxesVisiveis.length > 0 && checkboxesVisiveis.every((cb) => cb.checked);
+    const algumMarcado = checkboxesVisiveis.some((cb) => cb.checked);
+
+    selectAllCheckbox.checked = todosMarcados;
+    selectAllCheckbox.indeterminate = algumMarcado && !todosMarcados;
+}
+
+// ========== FUNÇÕES DE SUGESTÕES ==========
+function buscarSugestoes(termo) {
+    console.log("🔍 Buscando sugestões para:", termo);
+
+    if (!termo || termo.length < 2) {
+        fecharSugestoes();
+        return;
+    }
+
+    clearTimeout(timerBusca);
+    timerBusca = setTimeout(async () => {
+        try {
+            console.log("📡 Buscando na API...");
+            const response = await fetch(`/api/buscar-produtos/${encodeURIComponent(termo)}`);
+
+            console.log("📊 Status da resposta:", response.status);
+
+            if (!response.ok) {
+                console.log("❌ API não respondeu ou retornou erro");
+                fecharSugestoes();
+                return;
+            }
+
+            const produtos = await response.json();
+            console.log("✅ Dados recebidos da API:", produtos);
+
+            if (produtos && Array.isArray(produtos) && produtos.length > 0) {
+                console.log(`🎯 ${produtos.length} produto(s) encontrado(s)`);
+                exibirSugestoes(produtos);
+            } else {
+                console.log("📭 Nenhum produto encontrado na API");
+                fecharSugestoes();
+            }
+        } catch (error) {
+            console.error("🚨 Erro na busca:", error);
+            fecharSugestoes();
+        }
+    }, 300);
+}
+
+function exibirSugestoes(produtos) {
+    const container = document.getElementById("sugestoesContainer");
+    const lista = document.getElementById("listaSugestoes");
+
+    if (!container || !lista) {
+        console.error("Elementos do DOM não encontrados");
+        return;
+    }
+
+    console.log("🖥️ Renderizando sugestões...");
+
+    let html = "";
+
+    if (produtos.length === 0) {
+        html = '<div class="p-3 text-center text-muted">Nenhum produto encontrado</div>';
+    } else {
+        produtos.forEach((produto, index) => {
+            console.log(`   ${index + 1}. ${produto.codigo} - ${produto.descricao}`);
+
+            const codigoEscapado = String(produto.codigo || "")
+                .replace(/\\/g, "\\\\")
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
+
+            const descricaoEscapada = String(produto.descricao || "")
+                .replace(/\\/g, "\\\\")
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"');
+
+            html += `
+                <div class="sugestao-item p-2 border-bottom" 
+                     onclick="selecionarSugestao('${codigoEscapado}', '${descricaoEscapada}')"
+                     style="cursor: pointer; transition: background-color 0.2s;"
+                     onmouseover="this.style.backgroundColor='#f8f9fa'"
+                     onmouseout="this.style.backgroundColor='transparent'">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div style="flex: 1;">
+                            <div class="fw-bold text-primary">${produto.codigo || "Sem código"}</div>
+                            <div class="small text-muted mt-1">${produto.descricao || "Sem descrição"}</div>
+                        </div>
+                        <div class="ms-2 text-end">
+                            <small class="text-muted">Clique para selecionar</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    lista.innerHTML = html;
+    container.style.display = "block";
+
+    const campo = document.getElementById("codigo_base");
+    if (campo) {
+        const campoRect = campo.getBoundingClientRect();
+        const parentRect = campo.parentElement.getBoundingClientRect();
+
+        container.style.top = campoRect.bottom - parentRect.top + 30 + "px";
+        container.style.left = "55px";
+        container.style.width = campo.offsetWidth + "px";
+        console.log("📍 Container posicionado");
+    }
+
+    console.log("✅ Sugestões renderizadas");
+}
+
+function fecharSugestoes() {
+    const container = document.getElementById("sugestoesContainer");
+    if (container) {
+        container.style.display = "none";
+        console.log("🔒 Sugestões fechadas");
+    }
+}
+
+function selecionarSugestao(codigo, descricao) {
+    console.log("🎯 Selecionando sugestão:", codigo);
+
+    document.getElementById("codigo_base").value = codigo;
+    document.getElementById("descricao").value = descricao;
+    document.getElementById("descricao").focus();
+    fecharSugestoes();
+    atualizarPreview();
+    verificarCodigoExistente(codigo);
+
+    console.log("✅ Sugestão selecionada");
+}
+
+// ========== VALIDAÇÃO DE CÓDIGO EXISTENTE ==========
+async function verificarCodigoExistente(codigo) {
+    if (!codigo || codigo.length < 3) return;
+
+    try {
+        const response = await fetch(`/api/verificar-codigo/${encodeURIComponent(codigo)}`);
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.existe) {
+            mostrarFeedback(`Produto "${codigo}" já está cadastrado!`, "warning");
+            document.getElementById("codigo_base").classList.add("is-invalid");
+        } else {
+            document.getElementById("codigo_base").classList.remove("is-invalid");
+        }
+    } catch (error) {
+        console.error("Erro ao verificar código:", error);
+    }
+}
+
+// ========== FUNÇÕES DE FORMATAÇÃO DE MOEDA ==========
+function formatarPreco(input) {
+    if (!input.value || input.value.trim() === '') {
+        input.value = '0,00';
+        return;
+    }
+    
+    let cursorPos = input.selectionStart;
+    let valor = input.value.replace(/[^\d,]/g, '');
+    
+    if (valor === '' || valor === ',') {
+        input.value = '0,00';
+        return;
+    }
+    
+    let temVirgula = valor.includes(',');
+    let parteInteira, parteDecimal;
+    
+    if (temVirgula) {
+        let partes = valor.split(',');
+        parteInteira = partes[0] || '0';
+        parteDecimal = partes[1] || '';
+        
+        if (parteDecimal.length > 2) {
+            parteDecimal = parteDecimal.substring(0, 2);
+        }
+    } else {
+        parteInteira = valor;
+        parteDecimal = '';
+    }
+    
+    parteInteira = parteInteira.replace(/^0+/g, '');
+    if (parteInteira === '') parteInteira = '0';
+    
+    if (parteInteira.length > 3) {
+        parteInteira = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+    
+    let resultado = parteInteira;
+    
+    if (parteDecimal) {
+        if (parteDecimal.length === 1) {
+            parteDecimal += '0';
+        }
+        resultado += ',' + parteDecimal;
+    } else {
+        resultado += ',00';
+    }
+    
+    input.value = resultado;
+    
+    setTimeout(() => {
+        input.setSelectionRange(cursorPos, cursorPos);
+    }, 0);
+}
+
+// ========== FUNÇÕES DO SCANNER AUTOMÁTICO ==========
+function configurarDetectorScanner() {
+    const campoCodigo = document.getElementById("codigo_base");
+    if (!campoCodigo) return;
+
+    campoCodigo.addEventListener("keydown", function (e) {
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+        if (e.key.length === 1) {
+            bufferLeitor += e.key;
+
+            if (timerLeitor) {
+                clearTimeout(timerLeitor);
+            }
+
+            timerLeitor = setTimeout(function () {
+                if (bufferLeitor.length >= 8 && bufferLeitor.length <= 20) {
+                    processarCodigoScanner(bufferLeitor);
+                } else {
+                    bufferLeitor = "";
+                }
+            }, 20);
+        }
+    });
+
+    campoCodigo.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            const valor = campoCodigo.value.trim();
+            if (valor.length >= 8 && valor.length <= 20 && /^[A-Za-z0-9]+$/.test(valor)) {
+                e.preventDefault();
+                processarCodigoScanner(valor);
+            }
+        }
+    });
+
+    campoCodigo.addEventListener("blur", function () {
+        bufferLeitor = "";
+        if (timerLeitor) {
+            clearTimeout(timerLeitor);
+            timerLeitor = null;
+        }
+        setTimeout(fecharSugestoes, 200);
+    });
+
+    campoCodigo.addEventListener("focus", function () {
+        this.select();
+    });
+}
+
+function processarCodigoScanner(codigo) {
+    const campoCodigo = document.getElementById("codigo_base");
+    campoCodigo.value = codigo.toUpperCase();
+
+    bufferLeitor = "";
+    if (timerLeitor) {
+        clearTimeout(timerLeitor);
+        timerLeitor = null;
+    }
+
+    fecharSugestoes();
+    verificarCodigoExistente(codigo.toUpperCase());
+    mostrarFeedback(`Código escaneado: ${codigo}`, "success");
+
+    campoCodigo.classList.add("scanner-sucesso");
+    setTimeout(() => {
+        campoCodigo.classList.remove("scanner-sucesso");
+    }, 1000);
+
+    setTimeout(() => {
+        document.getElementById("descricao").focus();
+    }, 100);
+
+    atualizarPreview();
+}
+
+// ========== FUNÇÃO PARA CRIAR HTML DE UMA GRADE ==========
+function criarGradeHTML(gradeId, numero, gradeData = null) {
+    const isPrincipal = numero === 1;
+    const titulo = isPrincipal ? 'Grade Principal' : 'Grade Adicional #' + numero;
+    const estoqueValor = gradeData ? gradeData.estoque : 0;
+    const minimoValor = gradeData ? gradeData.estoque_minimo : 5;
+    const maximoValor = gradeData ? gradeData.estoque_maximo : 50;
+    
+    // 🔥 OBTER VALORES DA GRADE (se existir)
+    const corValor = gradeData ? gradeData.cor : '';
+    const tamanhoValor = gradeData ? gradeData.tamanho : '';
+    const localizacaoValor = gradeData ? gradeData.localizacao : '';
+    
+    const botaoRemover = !isPrincipal ? 
+        '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removerGrade(\'' + gradeId + '\')"><i class="bi bi-trash"></i></button>' : '';
+    
+    // 🔥 CRIAR HTML DAS OPÇÕES DE COR
+    let opcoesCor = '<option value="">Selecione...</option>';
+    coresCadastradas.forEach(cor => {
+        const selected = cor.nome === corValor ? ' selected' : '';
+        opcoesCor += `<option value="${cor.nome}"${selected}>${cor.nome}</option>`;
+    });
+    
+    // 🔥 CRIAR HTML DAS OPÇÕES DE TAMANHO
+    let opcoesTamanho = '<option value="">Selecione...</option>';
+    
+    // Organizar tamanhos por categoria
+    const tamanhosAdulto = tamanhosCadastrados.filter(t => t.categoria === 'Adulto');
+    const tamanhosInfantil = tamanhosCadastrados.filter(t => t.categoria === 'Infantil');
+    const tamanhosUnico = tamanhosCadastrados.filter(t => t.categoria === 'Único');
+    
+    if (tamanhosAdulto.length > 0) {
+        opcoesTamanho += '<optgroup label="Adulto">';
+        tamanhosAdulto.forEach(tamanho => {
+            const selected = tamanho.valor === tamanhoValor ? ' selected' : '';
+            opcoesTamanho += `<option value="${tamanho.valor}"${selected}>${tamanho.valor}</option>`;
+        });
+        opcoesTamanho += '</optgroup>';
+    }
+    
+    if (tamanhosInfantil.length > 0) {
+        opcoesTamanho += '<optgroup label="Infantil">';
+        tamanhosInfantil.forEach(tamanho => {
+            const selected = tamanho.valor === tamanhoValor ? ' selected' : '';
+            opcoesTamanho += `<option value="${tamanho.valor}"${selected}>${tamanho.valor}</option>`;
+        });
+        opcoesTamanho += '</optgroup>';
+    }
+    
+    if (tamanhosUnico.length > 0) {
+        opcoesTamanho += '<optgroup label="Único">';
+        tamanhosUnico.forEach(tamanho => {
+            const selected = tamanho.valor === tamanhoValor ? ' selected' : '';
+            opcoesTamanho += `<option value="${tamanho.valor}"${selected}>${tamanho.valor}</option>`;
+        });
+        opcoesTamanho += '</optgroup>';
+    }
+    
+    // 🔥 CRIAR HTML DAS OPÇÕES DE LOCALIZAÇÃO
+    let opcoesLocalizacao = '<option value="">Selecione...</option>';
+    localizacoesCadastradas.forEach(localizacao => {
+        const selected = localizacao.codigo === localizacaoValor ? ' selected' : '';
+        opcoesLocalizacao += `<option value="${localizacao.codigo}"${selected}>${localizacao.descricao || localizacao.codigo}</option>`;
+    });
+    
+    return `<div class="card mb-3 grade-item" id="${gradeId}">
+        <div class="card-header bg-light py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">${titulo}</span>
+                ${botaoRemover}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Cor *</label>
+                    <div class="input-group">
+                        <select class="form-select grade-cor" name="cor[]" required onchange="atualizarPreview()">
+                            ${opcoesCor}
+                        </select>
+                        <button type="button" class="btn btn-outline-primary" onclick="abrirModalNovaCor(event)" 
+                                data-bs-toggle="tooltip" title="Cadastrar nova cor">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Tamanho *</label>
+                    <div class="input-group">
+                        <select class="form-select grade-tamanho" name="tamanho[]" required onchange="atualizarPreview()">
+                            ${opcoesTamanho}
+                        </select>
+                        <button type="button" class="btn btn-outline-primary" onclick="abrirModalNovoTamanho(event)" 
+                                data-bs-toggle="tooltip" title="Cadastrar novo tamanho">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Estoque Atual *</label>
+                    <input type="number" class="form-control grade-estoque" name="estoque[]" 
+                           value="${estoqueValor}" min="0" required onchange="atualizarPreview()">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Estoque Mínimo</label>
+                    <input type="number" class="form-control grade-minimo" name="estoque_minimo[]" 
+                           value="${minimoValor}" min="0">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Estoque Máximo</label>
+                    <input type="number" class="form-control grade-maximo" name="estoque_maximo[]" 
+                           value="${maximoValor}" min="1">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="form-label">Localização</label>
+                    <div class="input-group">
+                        <select class="form-select grade-localizacao" name="localizacao[]">
+                            ${opcoesLocalizacao}
+                        </select>
+                        <button type="button" class="btn btn-outline-secondary" onclick="abrirModalNovaLocalizacao(event)" 
+                                data-bs-toggle="tooltip" title="Cadastrar nova localização">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" name="grade_id[]" value="${gradeData ? gradeData.id : ''}">
+        </div>
+    </div>`;
+}
+
+// Carregar grades existentes
+function carregarGradesExistentes() {
+    const container = document.getElementById('gradesContainer');
+    container.innerHTML = '';
+    
+    gradesExistentes.forEach((grade, index) => {
+        gradeCount++;
+        const gradeId = 'grade_' + gradeCount;
+        
+        const gradeHTML = criarGradeHTML(gradeId, gradeCount, grade);
+        container.insertAdjacentHTML('beforeend', gradeHTML);
+    });
+    
+    // Se não houver grades, adicionar uma vazia
+    if (gradesExistentes.length === 0) {
+        adicionarGrade();
+    }
+    
+    // 🔥 ATUALIZAR OS SELECTS DAS GRADES 🔥
+    setTimeout(() => {
+        atualizarSelectCores();
+        atualizarSelectTamanhos();
+        atualizarSelectLocalizacoes();
+    }, 200);
+}
+
+// Adicionar nova grade (vazia)
+function adicionarGrade() {
+    gradeCount++;
+    const gradeId = 'grade_' + gradeCount;
+    const gradeHTML = criarGradeHTML(gradeId, gradeCount);
+    document.getElementById('gradesContainer').insertAdjacentHTML('beforeend', gradeHTML);
+    
+    // 🔥 ATUALIZAR OS SELECTS DA NOVA GRADE 🔥
+    setTimeout(() => {
+        atualizarSelectCores();
+        atualizarSelectTamanhos();
+        atualizarSelectLocalizacoes();
+    }, 100);
+}
+
+// Remover grade
+function removerGrade(gradeId) {
+    if (confirm('Remover esta grade? O estoque será perdido.')) {
+        const gradeElement = document.getElementById(gradeId);
+        
+        // ENCONTRAR O ID REAL DA GRADE NO BANCO DE DADOS
+        const gradeIdInput = gradeElement.querySelector('input[name="grade_id[]"]');
+        
+        if (gradeIdInput && gradeIdInput.value) {
+            // TEM ID DO BANCO - É UMA GRADE EXISTENTE
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'grade_remover[]';
+            hiddenInput.value = gradeIdInput.value;  // ID REAL DO BANCO
+            gradeElement.appendChild(hiddenInput);
+        }
+        // Se não tiver ID, é uma grade nova que não foi salva ainda
+        
+        // Esconder a grade
+        gradeElement.style.display = 'none';
+    }
+}
+
+// Gerar código base automático
+function gerarCodigoBase() {
+    const modelo = document.getElementById('modelo').value;
+    if (!modelo) {
+        mostrarFeedback('Selecione o modelo primeiro!', 'warning');
+        document.getElementById('modelo').focus();
+        return;
+    }
+    
+    const modeloAbrev = modelo.substring(0, 3).toUpperCase();
+    const numeroAleatorio = Math.floor(100 + Math.random() * 900);
+    const codigo = `${modeloAbrev}${numeroAleatorio}`;
+    document.getElementById('codigo_base').value = codigo;
+    mostrarFeedback(`Código gerado: ${codigo}`, 'success');
+}
+
+// Ajustar tamanhos baseado no tipo
+function ajustarTamanhosPorTipo() {
+    atualizarSelectTamanhos();
+    mostrarFeedback('Tamanhos ajustados para o tipo selecionado.', 'info');
+}
+
+// ========== FUNÇÕES DE VISUALIZAÇÃO ==========
+function atualizarPreview() {
+    document.getElementById("previewDescricao").textContent =
+        document.getElementById("descricao").value || "---";
+    document.getElementById("previewCodigoBase").textContent =
+        document.getElementById("codigo_base").value || "---";
+    document.getElementById("previewModelo").textContent =
+        document.getElementById("modelo").value || "---";
+    document.getElementById("previewGenero").textContent =
+        document.getElementById("genero").value || "---";
+
+    const campoCusto = document.getElementById("custo");
+    if (campoCusto) {
+        let valorCusto = campoCusto.value.trim();
+
+        if (!valorCusto || valorCusto === "") {
+            document.getElementById("previewCusto").textContent = "R$ 0,00";
+        } else {
+            if (!valorCusto.includes(",")) {
+                valorCusto = valorCusto + ",00";
+            } else {
+                const partes = valorCusto.split(",");
+                if (partes[1].length === 1) {
+                    valorCusto = partes[0] + "," + partes[1] + "0";
+                } else if (partes[1].length === 0) {
+                    valorCusto = partes[0] + ",00";
+                }
+            }
+            document.getElementById("previewCusto").textContent = "R$ " + valorCusto;
+        }
+    }
+
+    const campoPreco = document.getElementById("preco");
+    if (campoPreco) {
+        let valorPreco = campoPreco.value.trim();
+
+        if (!valorPreco || valorPreco === "") {
+            document.getElementById("previewPreco").textContent = "R$ 0,00";
+        } else {
+            if (!valorPreco.includes(",")) {
+                valorPreco = valorPreco + ",00";
+            } else {
+                const partes = valorPreco.split(",");
+                if (partes[1].length === 1) {
+                    valorPreco = partes[0] + "," + partes[1] + "0";
+                } else if (partes[1].length === 0) {
+                    valorPreco = partes[0] + ",00";
+                }
+            }
+            document.getElementById("previewPreco").textContent = "R$ " + valorPreco;
+        }
+    }
+
+    calcularMargem();
+
+    const gradesPreview = document.getElementById("previewGrades");
+    const gradeItems = document.querySelectorAll(".grade-item");
+    let totalEstoque = 0;
+
+    if (gradeItems.length === 0) {
+        gradesPreview.innerHTML = '<p class="text-muted small">Nenhuma grade</p>';
+    } else {
+        let html = '<div class="d-flex flex-wrap gap-1 justify-content-center">';
+
+        gradeItems.forEach((item) => {
+            if (item.style.display !== 'none') {
+                const cor = item.querySelector(".grade-cor")?.value;
+                const tamanho = item.querySelector(".grade-tamanho")?.value;
+                const estoque = parseInt(
+                    item.querySelector(".grade-estoque")?.value || 0
+                );
+                totalEstoque += estoque;
+
+                if (cor && tamanho) {
+                    const corHex = getCorHex(cor);
+                    const textColor = getCorText(cor);
+                    html += `
+                        <span class="badge d-flex align-items-center" 
+                              style="background-color: ${corHex}; color: ${textColor};">
+                            ${cor.substring(0, 3)}/${tamanho}
+                            <small class="ms-1" style="opacity: 0.9;">(${estoque})</small>
+                        </span>
+                    `;
+                }
+            }
+        });
+
+        html += "</div>";
+        if (totalEstoque > 0) {
+            html += `<div class="mt-2 text-center"><small>Total: ${totalEstoque} unidades</small></div>`;
+        }
+
+        gradesPreview.innerHTML = html;
+    }
+}
+
+function calcularMargem() {
+    const campoCusto = document.getElementById("custo");
+    const campoPreco = document.getElementById("preco");
+    const margemContainer = document.getElementById("previewMargemContainer");
+    const margemElement = document.getElementById("previewMargem");
+
+    if (!campoCusto || !campoPreco || !margemContainer || !margemElement) return;
+
+    let valorCusto = campoCusto.value.trim();
+    let valorPreco = campoPreco.value.trim();
+
+    valorCusto = valorCusto.replace(/\./g, "").replace(",", ".");
+    valorPreco = valorPreco.replace(/\./g, "").replace(",", ".");
+
+    const custo = parseFloat(valorCusto) || 0;
+    const preco = parseFloat(valorPreco) || 0;
+
+    if (custo > 0 && preco > 0) {
+        const margem = ((preco - custo) / custo) * 100;
+        
+        margemContainer.style.display = "block";
+        margemElement.textContent = margem.toFixed(1) + "%";
+        
+        if (margem >= 50) {
+            margemElement.className = "badge bg-success";
+        } else if (margem >= 30) {
+            margemElement.className = "badge bg-warning";
+        } else if (margem > 0) {
+            margemElement.className = "badge bg-danger";
+        } else {
+            margemElement.className = "badge bg-secondary";
+        }
+    } else {
+        margemContainer.style.display = "none";
+    }
+}
+
+function getCorHex(corNome) {
+    const corCadastrada = coresCadastradas.find((c) => c.nome === corNome);
+    if (corCadastrada && corCadastrada.hex) {
+        return corCadastrada.hex;
+    }
+
+    const coresHex = {
+        Preto: "#212529",
+        Azul: "#0d6efd",
+        Vermelho: "#dc3545",
+        Branco: "#ffffff",
+        Verde: "#198754",
+        Amarelo: "#ffc107",
+        Rosa: "#e83e8c",
+        Cinza: "#6c757d",
+        Marrom: "#795548",
+        Laranja: "#fd7e14",
+        Roxo: "#6f42c1",
+    };
+    return coresHex[corNome] || "#6c757d";
+}
+
+function getCorText(cor) {
+    return cor === "Branco" || cor === "Amarelo" ? "black" : "white";
+}
+
+// Mostrar mensagem
+function mostrarFeedback(mensagem, tipo = "info") {
+    document.querySelectorAll(".feedback-scanner").forEach((el) => el.remove());
+
+    const feedback = document.createElement("div");
+    feedback.className = `alert alert-${tipo} alert-dismissible fade show feedback-scanner position-fixed`;
+    feedback.style.cssText = `
+        position: fixed;
+        top: 150px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    `;
+
+    const icon =
+        tipo === "success"
+            ? "check-circle"
+            : tipo === "warning"
+            ? "exclamation-triangle"
+            : tipo === "danger"
+            ? "x-circle"
+            : "info-circle";
+
+    feedback.innerHTML = `
+        <i class="bi bi-${icon} me-2"></i>
+        ${mensagem}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+
+    document.body.appendChild(feedback);
+
+    setTimeout(() => {
+        if (feedback.parentElement) {
+            feedback.remove();
+        }
+    }, 3000);
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Formulário de edição de produto inicializado');
+    
+    // 🔥 AGORA USA O BACKEND EM VEZ DO LOCALSTORAGE 🔥
+    carregarDadosBackend().then(() => {
+        // Carregar grades existentes DEPOIS que os dados do backend chegarem
+        carregarGradesExistentes();
+    });
+    
+    // 🔥 CONFIGURAR SCANNER 🔥
+    configurarDetectorScanner();
+    
+    // 🔥 CONFIGURAR CAMPOS DE CUSTO E PREÇO 🔥
+    const camposMoeda = ['custo', 'preco'];
+    
+    camposMoeda.forEach(function(campoId) {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.addEventListener('blur', function() {
+                formatarPreco(this);
+                atualizarPreview();
+            });
+            
+            campo.addEventListener('focus', function() {
+                this.select();
+            });
+            
+            campo.addEventListener('keydown', function(e) {
+                if (
+                    (e.key >= '0' && e.key <= '9') ||
+                    e.key === ',' ||
+                    e.key === 'Backspace' ||
+                    e.key === 'Delete' ||
+                    e.key === 'Tab' ||
+                    e.key === 'ArrowLeft' ||
+                    e.key === 'ArrowRight' ||
+                    e.key === 'ArrowUp' ||
+                    e.key === 'ArrowDown' ||
+                    e.key === 'Home' ||
+                    e.key === 'End' ||
+                    e.ctrlKey ||
+                    e.metaKey
+                ) {
+                    return true;
+                }
+                
+                e.preventDefault();
+                return false;
+            });
+            
+            // Formatar valor inicial
+            if (!campo.value.includes(',')) {
+                formatarPreco(campo);
+            }
+        }
+    });
+    
+    // Adicionar eventos para atualizar preview
+    ["codigo_base", "descricao", "modelo", "genero", "colecao", "custo", "preco"].forEach(
+        (id) => {
+            const campo = document.getElementById(id);
+            if (campo) campo.addEventListener("input", atualizarPreview);
+        }
+    );
+    
+    document.addEventListener("click", function (e) {
+        const sugestoesContainer = document.getElementById("sugestoesContainer");
+        const campoCodigo = document.getElementById("codigo_base");
+
+        if (sugestoesContainer && sugestoesContainer.style.display !== "none") {
+            if (
+                !sugestoesContainer.contains(e.target) &&
+                !campoCodigo.contains(e.target)
+            ) {
+                fecharSugestoes();
+            }
+        }
+    });
+    
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "F5") {
+            e.preventDefault();
+            gerarCodigoBase();
+        }
+
+        if (e.key === "Escape") {
+            e.preventDefault();
+            window.location.href = "{{ url_for('produtos') }}";
+        }
+
+        if (e.key === "Enter" && document.activeElement.id === "codigo_base") {
+            const valor = document.getElementById("codigo_base").value.trim();
+            if (valor.length >= 3) {
+                e.preventDefault();
+                document.getElementById("descricao").focus();
+            }
+        }
+
+        if (e.key === "Enter" && e.ctrlKey) {
+            e.preventDefault();
+            document.getElementById("formProduto").submit();
+        }
+
+        if (e.key === "Escape") {
+            const sugestoesContainer = document.getElementById("sugestoesContainer");
+            if (sugestoesContainer && sugestoesContainer.style.display !== "none") {
+                e.preventDefault();
+                fecharSugestoes();
+                document.getElementById("codigo_base").focus();
+            }
+        }
+    });
+    
+    // Validar formulário
+    document.getElementById('formProduto').addEventListener('submit', function(e) {
+        // 🔥 CONVERTER CAMPOS DE MOEDA PARA NÚMERO AMERICANO 🔥
+        const camposMoedaValidar = ['custo', 'preco'];
+        let errosMoeda = [];
+        
+        camposMoedaValidar.forEach(function(campoId) {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                let valorFormatado = campo.value.trim();
+                let valorAmericano = valorFormatado
+                    .replace(/\./g, '')
+                    .replace(',', '.');
+                
+                if (isNaN(parseFloat(valorAmericano))) {
+                    errosMoeda.push(campoId === 'custo' ? 'Custo' : 'Preço');
+                } else {
+                    campo.value = valorAmericano;
+                }
+            }
+        });
+        
+        if (errosMoeda.length > 0) {
+            e.preventDefault();
+            mostrarFeedback(`Valor(es) inválido(s): ${errosMoeda.join(', ')}. Use o formato: 1.234,56`, 'danger');
+            return;
+        }
+        
+        // 🔥 VALIDAR SE PREÇO É MAIOR QUE CUSTO 🔥
+        const campoCusto = document.getElementById('custo');
+        const campoPreco = document.getElementById('preco');
+        
+        if (campoCusto && campoPreco) {
+            const custo = parseFloat(campoCusto.value);
+            const preco = parseFloat(campoPreco.value);
+            
+            if (preco < custo) {
+                e.preventDefault();
+                mostrarFeedback('O preço de venda não pode ser menor que o custo!', 'danger');
+                campoPreco.focus();
+                return;
+            }
+        }
+        
+        // Verificar se há pelo menos uma grade válida
+        const gradeItems = document.querySelectorAll('.grade-item');
+        let gradesValidas = false;
+        
+        gradeItems.forEach(item => {
+            if (item.style.display !== 'none') {
+                const cor = item.querySelector('.grade-cor')?.value;
+                const tamanho = item.querySelector('.grade-tamanho')?.value;
+                if (cor && tamanho) {
+                    gradesValidas = true;
+                }
+            }
+        });
+        
+        if (!gradesValidas) {
+            e.preventDefault();
+            mostrarFeedback('Adicione pelo menos uma grade válida (cor e tamanho)', 'danger');
+            return;
+        }
+        
+        if (!confirm('Confirmar alterações no produto?')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Inicializar preview
+    atualizarPreview();
+    
+    // Inicializar tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<style>
+.grade-item {
+    border-left: 4px solid #0d6efd;
+    transition: all 0.3s;
+}
+
+.grade-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.scanner-sucesso {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+    transition: all 0.5s;
+}
+
+.font-monospace {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.4em 0.8em;
+    transition: transform 0.2s;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+kbd {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    color: #212529;
+    display: inline-block;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875em;
+    line-height: 1.5;
+    padding: 0.2em 0.4em;
+    white-space: nowrap;
+}
+
+.input-group-text.bg-primary {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.alert-success {
+    border-left: 4px solid #198754;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.sugestao-item {
+    transition: background-color 0.2s;
+}
+
+.sugestao-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+#sugestoesContainer {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+
+#listaSugestoes::-webkit-scrollbar {
+    width: 6px;
+}
+
+#listaSugestoes::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#listaSugestoes::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+#listaSugestoes::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+.input-group .btn-outline-primary {
+    border-color: #dee2e6;
+    border-left: none;
+}
+
+.input-group .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.input-group .btn-outline-secondary {
+    border-color: #dee2e6;
+    border-left: none;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+    border-color: #6c757d;
+}
+
+.input-group .form-select {
+    border-right: none;
+}
+
+.input-group .btn-outline-primary:focus,
+.input-group .btn-outline-secondary:focus {
+    box-shadow: none;
+}
+
+.selecionar-item {
+    cursor: pointer;
+}
+
+.table-sm th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.table-sm td {
+    font-size: 0.9rem;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.875em;
+    color: #d63384;
+}
+
+.modal-lg {
+    max-width: 800px;
+}
+
+.table-responsive {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn-outline-warning {
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    color: #212529;
+    border-color: #ffc107;
+}
+
+.btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+</style>
+{% endblock %}

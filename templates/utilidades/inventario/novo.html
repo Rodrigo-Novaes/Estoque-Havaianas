@@ -1,0 +1,826 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Nova Contagem de Inventário{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-plus-circle me-2"></i>Nova Contagem de Inventário
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('inventario') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Formulário Principal -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Configurar Contagem</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_inventario') }}" id="formInventario">
+                    <!-- Tipo de Contagem -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Tipo de Contagem</label>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card tipo-card {% if request.form.get('tipo') == 'COMPLETO' %}border-primary selected{% endif %}" onclick="selecionarTipo('COMPLETO')">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo" id="tipo_completo" value="COMPLETO" {% if request.form.get('tipo') == 'COMPLETO' %}checked{% endif %} required>
+                                            <label class="form-check-label fw-bold" for="tipo_completo">
+                                                <i class="bi bi-grid-3x3-gap-fill d-block fs-1 mb-2"></i>
+                                                Inventário Completo
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Todos os produtos serão incluídos</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card tipo-card {% if request.form.get('tipo') == 'PARCIAL' %}border-warning selected{% endif %}" onclick="selecionarTipo('PARCIAL')">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo" id="tipo_parcial" value="PARCIAL" {% if request.form.get('tipo') == 'PARCIAL' %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="tipo_parcial">
+                                                <i class="bi bi-ui-checks d-block fs-1 mb-2"></i>
+                                                Inventário Parcial
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Selecione os produtos a contar</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card tipo-card {% if request.form.get('tipo') == 'AJUSTE' %}border-success selected{% endif %}" onclick="selecionarTipo('AJUSTE')">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tipo" id="tipo_ajuste" value="AJUSTE" {% if request.form.get('tipo') == 'AJUSTE' %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="tipo_ajuste">
+                                                <i class="bi bi-arrow-left-right d-block fs-1 mb-2"></i>
+                                                Ajuste de Estoque
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Correções pontuais</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Observações -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Observações</label>
+                        <textarea class="form-control" name="observacao" rows="3" placeholder="Informações adicionais sobre esta contagem...">{{ request.form.get('observacao', '') }}</textarea>
+                    </div>
+                    
+                    <!-- Input oculto para armazenar os IDs selecionados -->
+                    <input type="hidden" id="produtosSelecionados" name="produtos_selecionados" value="">
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('inventario') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btnIniciarContagem">
+                            <i class="bi bi-play-circle me-1"></i> Iniciar Contagem
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Painel de Informações -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Instruções</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 p-2 bg-light rounded" id="info-completo">
+                    <h6 class="fw-bold text-primary"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Inventário Completo</h6>
+                    <p class="small text-muted mb-0">Todos os produtos serão incluídos automaticamente na contagem. Ideal para balanços gerais.</p>
+                </div>
+                
+                <div class="mb-3 p-2 bg-light rounded" id="info-parcial">
+                    <h6 class="fw-bold text-warning"><i class="bi bi-ui-checks me-2"></i>Inventário Parcial</h6>
+                    <p class="small text-muted mb-0">Você poderá selecionar os produtos específicos que deseja contar. Útil para conferir apenas determinados itens.</p>
+                </div>
+                
+                <div class="p-2 bg-light rounded" id="info-ajuste">
+                    <h6 class="fw-bold text-success"><i class="bi bi-arrow-left-right me-2"></i>Ajuste de Estoque</h6>
+                    <p class="small text-muted mb-0">Para correções pontuais de estoque. Você poderá buscar e ajustar produtos individualmente.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estatísticas Rápidas -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Total de Produtos
+                        <span class="badge bg-primary rounded-pill">{{ total_produtos }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Total de Grades
+                        <span class="badge bg-info rounded-pill">{{ total_grades }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Itens em Estoque
+                        <span class="badge bg-success rounded-pill">{{ total_estoque }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NOVA SEÇÃO: Seleção de Produtos para Inventário Parcial (aparece quando escolhe PARCIAL) -->
+<div class="row mt-4" id="selecaoProdutos" style="display: none;">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-ui-checks me-2"></i>Selecionar Produtos para Contagem Parcial</h5>
+                <span class="badge bg-dark" id="totalGeral">{{ produtos|length }}</span>
+            </div>
+            <div class="card-body">
+                <!-- FILTROS INTELIGENTES - AGORA USA API DE MODELOS -->
+                <div class="row g-0">
+                    <!-- Busca -->
+                    <div class="col-md-5 pe-2">
+                        <label class="form-label fw-bold"><i class="bi bi-search me-1"></i>Buscar Produto</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                            <input type="text" class="form-control" id="buscaProduto"
+                                   placeholder="SKU, descrição..." 
+                                   value=""
+                                   autocomplete="off">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparBusca()" title="Limpar busca" style="display: none;" id="limparBuscaBtn">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i> Busca em tempo real
+                        </small>
+                    </div>
+                    
+                    <!-- Modelo (AGORA CARREGADO DA API) -->
+                    <div class="col-md-4 pe-2">
+                        <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i>Modelo</label>
+                        <div class="input-group">
+                            <select class="form-select" id="filtroModelo">
+                                <option value="">Todos os modelos</option>
+                                <!-- Modelos serão carregados dinamicamente da API na ordem de cadastro -->
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroModelo()" title="Limpar filtro" style="display: none;" id="limparModeloBtn">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i>Status</label>
+                        <div class="input-group">
+                            <select class="form-select" id="filtroStatus">
+                                <option value="todos">Todos</option>
+                                <option value="com_estoque">Com Estoque</option>
+                                <option value="sem_estoque">Sem Estoque</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroStatus()" title="Limpar filtro" style="display: none;" id="limparStatusBtn">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status atual dos filtros -->
+                <div class="mt-3 p-2 bg-light rounded">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        <span class="fw-bold">Mostrando:</span>
+                        
+                        <!-- Badge de Busca -->
+                        <span class="badge bg-secondary px-3 py-2" id="badgeBusca" style="display: none;"></span>
+                        
+                        <!-- Badge de Modelo -->
+                        <span class="badge bg-secondary px-3 py-2" id="badgeModelo" style="display: none;"></span>
+                        
+                        <!-- Badge de Status -->
+                        <span class="badge bg-secondary px-3 py-2" id="badgeStatus" style="display: none;"></span>
+                        
+                        <!-- Resultados -->
+                        <span class="badge bg-dark px-3 py-2 ms-auto" id="contadorResultados">
+                            <i class="bi bi-list-ul me-1"></i>{{ produtos|length }} produto(s)
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Tabela de Produtos -->
+                <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th width="5%" class="text-center">
+                                    <input type="checkbox" class="form-check-input" id="checkTodos" onchange="toggleTodos()">
+                                </th>
+                                <th width="15%">SKU</th>
+                                <th width="30%">Produto</th>
+                                <th width="15%">Modelo</th>
+                                <th width="10%" class="text-center">Grades</th>
+                                <th width="10%" class="text-center">Estoque</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaProdutos">
+                            {% for produto in produtos %}
+                            {% set estoque_total = produto.grades|sum(attribute='estoque_atual') %}
+                            <tr class="produto-row" 
+                                data-sku="{{ produto.sku|lower }}"
+                                data-descricao="{{ produto.descricao|lower }}"
+                                data-modelo="{{ produto.modelo|default('')|lower }}"
+                                data-estoque="{{ estoque_total }}">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input produto-check" 
+                                           value="{{ produto.id }}" 
+                                           data-produto-id="{{ produto.id }}">
+                                </td>
+                                <td><span class="badge bg-secondary">{{ produto.sku }}</span></td>
+                                <td>{{ produto.descricao }}</td>
+                                <td>{{ produto.modelo or '---' }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ produto.grades|length }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if estoque_total > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ estoque_total }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mensagem de nenhum resultado -->
+                <div id="semResultados" class="text-center py-4" style="display: none;">
+                    <i class="bi bi-search display-6 text-muted"></i>
+                    <p class="text-muted mt-2">Nenhum produto encontrado com os filtros selecionados.</p>
+                    <button class="btn btn-sm btn-primary" onclick="limparTodosFiltros()">
+                        <i class="bi bi-eraser me-1"></i> Limpar filtros
+                    </button>
+                </div>
+                
+                <!-- Barra de Seleção -->
+                <div class="d-flex justify-content-between align-items-center mt-3 p-3 bg-light rounded">
+                    <div>
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        <span id="contadorSelecionados">0</span> produtos selecionados
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" type="button" onclick="selecionarTodosVisiveis()">
+                            <i class="bi bi-check-all"></i> Selecionar Visíveis
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparSelecao()">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="confirmarSelecao()" id="btnConfirmarSelecao" disabled>
+                            <i class="bi bi-check-circle me-1"></i> Confirmar Seleção
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação da Seleção -->
+<div class="modal fade" id="modalConfirmarSelecao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-question-circle me-2"></i>Confirmar Seleção</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-ui-checks display-1 text-warning"></i>
+                </div>
+                <p class="text-center">Você selecionou <strong id="modalQuantidade"></strong> produto(s).</p>
+                <p class="text-center text-muted small">A contagem será criada apenas para os produtos selecionados.</p>
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Confirme para prosseguir com o inventário parcial.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="criarInventarioParcial()">
+                    <i class="bi bi-check-circle me-1"></i> Confirmar e Iniciar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== VARIÁVEIS GLOBAIS ==========
+let tipoSelecionado = '';
+let modelosCadastrados = [];
+let coresCadastradas = [];
+let tamanhosCadastrados = [];
+let localizacoesCadastradas = [];
+
+// ===== SELEÇÃO DE TIPO =====
+function selecionarTipo(tipo) {
+    tipoSelecionado = tipo;
+    
+    // Atualizar UI dos cards
+    document.querySelectorAll('.tipo-card').forEach(card => {
+        card.classList.remove('border-primary', 'border-warning', 'border-success', 'selected');
+    });
+    
+    // Marcar radio button
+    document.querySelector(`input[value="${tipo}"]`).checked = true;
+    
+    if (tipo === 'COMPLETO') {
+        document.querySelector('.tipo-card:has(input[value="COMPLETO"])').classList.add('border-primary', 'selected');
+        document.getElementById('selecaoProdutos').style.display = 'none';
+    } else if (tipo === 'PARCIAL') {
+        document.querySelector('.tipo-card:has(input[value="PARCIAL"])').classList.add('border-warning', 'selected');
+        document.getElementById('selecaoProdutos').style.display = 'block';
+        setTimeout(() => {
+            filtrarProdutos();
+        }, 100);
+    } else if (tipo === 'AJUSTE') {
+        document.querySelector('.tipo-card:has(input[value="AJUSTE"])').classList.add('border-success', 'selected');
+        document.getElementById('selecaoProdutos').style.display = 'none';
+    }
+}
+
+// ===== FUNÇÃO PARA CARREGAR MODELOS DA API =====
+async function carregarModelosDaAPI() {
+    try {
+        console.log("🔍 Carregando modelos da API...");
+        const response = await fetch('/api/modelos');
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        modelosCadastrados = await response.json();
+        console.log(`✅ ${modelosCadastrados.length} modelos carregados da API`);
+        console.log("📋 Ordem dos modelos:", modelosCadastrados.map(m => m.nome));
+        
+        // 🔥 CARREGAR MODELOS NO FILTRO (MANTÉM ORDEM DO CADASTRO)
+        carregarModelosNoFiltro();
+        
+    } catch (error) {
+        console.error("❌ Erro ao carregar modelos da API:", error);
+        
+        // FALLBACK: Tentar carregar do localStorage se a API falhar
+        try {
+            console.log("⚠️ Tentando fallback para localStorage...");
+            const modelosLS = localStorage.getItem("havaianas_modelos");
+            if (modelosLS) {
+                modelosCadastrados = JSON.parse(modelosLS);
+                console.log(`✅ ${modelosCadastrados.length} modelos carregados do localStorage (fallback)`);
+            } else {
+                modelosCadastrados = [];
+            }
+        } catch (e) {
+            console.error("❌ Erro no fallback:", e);
+            modelosCadastrados = [];
+        }
+        
+        // Mesmo com fallback, carregar no filtro
+        carregarModelosNoFiltro();
+    }
+}
+
+// ===== CARREGAR DADOS DO SISTEMA =====
+async function carregarDadosSistema() {
+    console.log("🔧 Carregando dados do sistema...");
+    
+    // Carregar modelos primeiro (AGORA USA API)
+    await carregarModelosDaAPI();
+    
+    // 🔥 CARREGAR CORES (para uso futuro)
+    try {
+        const response = await fetch('/api/cores');
+        if (response.ok) {
+            coresCadastradas = await response.json();
+            console.log(`✅ ${coresCadastradas.length} cores carregadas da API`);
+        } else {
+            // Fallback para localStorage
+            const coresLS = localStorage.getItem("havaianas_cores");
+            if (coresLS) coresCadastradas = JSON.parse(coresLS);
+        }
+    } catch (e) {
+        console.error("❌ Erro ao carregar cores:", e);
+        coresCadastradas = [];
+    }
+    
+    // 🔥 CARREGAR TAMANHOS (para uso futuro)
+    try {
+        const response = await fetch('/api/tamanhos');
+        if (response.ok) {
+            tamanhosCadastrados = await response.json();
+            console.log(`✅ ${tamanhosCadastrados.length} tamanhos carregados da API`);
+        } else {
+            const tamanhosLS = localStorage.getItem("havaianas_tamanhos");
+            if (tamanhosLS) tamanhosCadastrados = JSON.parse(tamanhosLS);
+        }
+    } catch (e) {
+        console.error("❌ Erro ao carregar tamanhos:", e);
+        tamanhosCadastrados = [];
+    }
+    
+    // 🔥 CARREGAR LOCALIZAÇÕES (para uso futuro)
+    try {
+        const response = await fetch('/api/localizacoes');
+        if (response.ok) {
+            localizacoesCadastradas = await response.json();
+            console.log(`✅ ${localizacoesCadastradas.length} localizações carregadas da API`);
+        } else {
+            const localizacoesLS = localStorage.getItem("havaianas_localizacoes");
+            if (localizacoesLS) localizacoesCadastradas = JSON.parse(localizacoesLS);
+        }
+    } catch (e) {
+        console.error("❌ Erro ao carregar localizações:", e);
+        localizacoesCadastradas = [];
+    }
+}
+
+// 🔥 FUNÇÃO PARA CARREGAR MODELOS NO FILTRO (MANTÉM A ORDEM DO CADASTRO)
+function carregarModelosNoFiltro() {
+    const selectModelo = document.getElementById('filtroModelo');
+    if (!selectModelo) return;
+    
+    console.log("📋 Carregando modelos no filtro...");
+    
+    // Guardar valor atual para restaurar depois
+    const valorAtual = selectModelo.value;
+    
+    // Limpar opções atuais (mantendo a primeira - "Todos os modelos")
+    while (selectModelo.options.length > 1) {
+        selectModelo.remove(1);
+    }
+    
+    if (!modelosCadastrados || modelosCadastrados.length === 0) {
+        console.log("ℹ️ Nenhum modelo para carregar no filtro");
+        return;
+    }
+    
+    // 🔥 NÃO ORDENAR - Manter a ordem original do cadastro
+    console.log("📊 Modelos na ordem de cadastro:", modelosCadastrados.map(m => m.nome));
+    
+    modelosCadastrados.forEach(modelo => {
+        if (modelo && modelo.nome) {
+            const option = document.createElement('option');
+            option.value = modelo.nome;
+            option.textContent = modelo.nome;
+            selectModelo.appendChild(option);
+        }
+    });
+    
+    console.log(`✅ ${modelosCadastrados.length} modelos carregados no filtro (ordem de cadastro)`);
+    
+    // Restaurar valor anterior se ainda existir
+    if (valorAtual && valorAtual !== '') {
+        const optionExists = Array.from(selectModelo.options).some(opt => opt.value === valorAtual);
+        if (optionExists) {
+            selectModelo.value = valorAtual;
+        }
+    }
+}
+
+// ===== FILTROS INTELIGENTES =====
+function verificarBotoesLimpar() {
+    const buscaInput = document.getElementById('buscaProduto');
+    const btnLimparBusca = document.getElementById('limparBuscaBtn');
+    if (btnLimparBusca) {
+        btnLimparBusca.style.display = buscaInput && buscaInput.value ? 'block' : 'none';
+    }
+    
+    const filtroModelo = document.getElementById('filtroModelo');
+    const btnLimparModelo = document.getElementById('limparModeloBtn');
+    if (btnLimparModelo) {
+        btnLimparModelo.style.display = filtroModelo && filtroModelo.value ? 'block' : 'none';
+    }
+    
+    const filtroStatus = document.getElementById('filtroStatus');
+    const btnLimparStatus = document.getElementById('limparStatusBtn');
+    if (btnLimparStatus) {
+        btnLimparStatus.style.display = filtroStatus && filtroStatus.value !== 'todos' ? 'block' : 'none';
+    }
+}
+
+function limparBusca() {
+    document.getElementById('buscaProduto').value = '';
+    filtrarProdutos();
+    document.getElementById('buscaProduto').focus();
+}
+
+function limparFiltroModelo() {
+    document.getElementById('filtroModelo').value = '';
+    filtrarProdutos();
+}
+
+function limparFiltroStatus() {
+    document.getElementById('filtroStatus').value = 'todos';
+    filtrarProdutos();
+}
+
+function limparTodosFiltros() {
+    document.getElementById('buscaProduto').value = '';
+    document.getElementById('filtroModelo').value = '';
+    document.getElementById('filtroStatus').value = 'todos';
+    filtrarProdutos();
+    document.getElementById('buscaProduto').focus();
+}
+
+function filtrarProdutos() {
+    const busca = document.getElementById('buscaProduto').value.toLowerCase().trim();
+    const modelo = document.getElementById('filtroModelo').value;
+    const status = document.getElementById('filtroStatus').value;
+    const linhas = document.querySelectorAll('.produto-row');
+    const badgeBusca = document.getElementById('badgeBusca');
+    const badgeModelo = document.getElementById('badgeModelo');
+    const badgeStatus = document.getElementById('badgeStatus');
+    let visiveis = 0;
+    
+    // Atualizar badges e botões
+    verificarBotoesLimpar();
+    
+    if (busca) {
+        badgeBusca.style.display = 'inline-block';
+        badgeBusca.innerHTML = `<i class="bi bi-search me-1"></i>"${busca}"`;
+    } else {
+        badgeBusca.style.display = 'none';
+    }
+    
+    if (modelo) {
+        badgeModelo.style.display = 'inline-block';
+        badgeModelo.innerHTML = `<i class="bi bi-funnel me-1"></i>${modelo}`;
+    } else {
+        badgeModelo.style.display = 'none';
+    }
+    
+    if (status !== 'todos') {
+        badgeStatus.style.display = 'inline-block';
+        badgeStatus.innerHTML = `<i class="bi bi-funnel me-1"></i>${status === 'com_estoque' ? 'Com Estoque' : 'Sem Estoque'}`;
+    } else {
+        badgeStatus.style.display = 'none';
+    }
+    
+    // Filtrar linhas
+    linhas.forEach(linha => {
+        const sku = linha.dataset.sku || '';
+        const descricao = linha.dataset.descricao || '';
+        const modeloProd = linha.dataset.modelo || '';
+        const estoqueTotal = parseInt(linha.dataset.estoque || '0');
+        
+        let mostrar = true;
+        
+        // Filtro de busca
+        if (busca && !sku.includes(busca) && !descricao.includes(busca)) {
+            mostrar = false;
+        }
+        
+        // Filtro de modelo (case insensitive)
+        if (modelo && modeloProd !== modelo.toLowerCase()) {
+            mostrar = false;
+        }
+        
+        // Filtro de status
+        if (status === 'com_estoque' && estoqueTotal === 0) {
+            mostrar = false;
+        }
+        if (status === 'sem_estoque' && estoqueTotal > 0) {
+            mostrar = false;
+        }
+        
+        linha.style.display = mostrar ? '' : 'none';
+        if (mostrar) visiveis++;
+    });
+    
+    // Atualizar contador
+    document.getElementById('contadorResultados').innerHTML = `<i class="bi bi-list-ul me-1"></i>${visiveis} produto(s)`;
+    
+    // Mostrar mensagem de sem resultados
+    const semResultados = document.getElementById('semResultados');
+    if (semResultados) {
+        semResultados.style.display = visiveis === 0 ? 'block' : 'none';
+    }
+    
+    // Atualizar checkbox "todos"
+    atualizarCheckboxTodos();
+}
+
+// ===== SELEÇÃO DE PRODUTOS =====
+function toggleTodos() {
+    const todosChecked = document.getElementById('checkTodos').checked;
+    
+    document.querySelectorAll('.produto-row').forEach(linha => {
+        if (linha.style.display !== 'none') {
+            const checkbox = linha.querySelector('.produto-check');
+            if (checkbox) checkbox.checked = todosChecked;
+        }
+    });
+    
+    atualizarContadorSelecionados();
+}
+
+function selecionarTodosVisiveis() {
+    document.querySelectorAll('.produto-row').forEach(linha => {
+        if (linha.style.display !== 'none') {
+            const checkbox = linha.querySelector('.produto-check');
+            if (checkbox) checkbox.checked = true;
+        }
+    });
+    atualizarContadorSelecionados();
+    atualizarCheckboxTodos();
+}
+
+function limparSelecao() {
+    document.querySelectorAll('.produto-check').forEach(cb => cb.checked = false);
+    document.getElementById('checkTodos').checked = false;
+    atualizarContadorSelecionados();
+}
+
+function atualizarCheckboxTodos() {
+    const linhasVisiveis = document.querySelectorAll('.produto-row:not([style*="display: none"])');
+    const selecionadosVisiveis = document.querySelectorAll('.produto-row:not([style*="display: none"]) .produto-check:checked').length;
+    
+    const checkTodos = document.getElementById('checkTodos');
+    if (checkTodos && linhasVisiveis.length > 0) {
+        checkTodos.checked = selecionadosVisiveis === linhasVisiveis.length;
+        checkTodos.indeterminate = selecionadosVisiveis > 0 && selecionadosVisiveis < linhasVisiveis.length;
+    } else if (checkTodos) {
+        checkTodos.checked = false;
+        checkTodos.indeterminate = false;
+    }
+}
+
+function atualizarContadorSelecionados() {
+    const selecionados = document.querySelectorAll('.produto-check:checked').length;
+    document.getElementById('contadorSelecionados').textContent = selecionados;
+    
+    // Habilitar/desabilitar botão de confirmar
+    const btnConfirmar = document.getElementById('btnConfirmarSelecao');
+    if (btnConfirmar) {
+        btnConfirmar.disabled = selecionados === 0;
+    }
+    
+    atualizarCheckboxTodos();
+}
+
+// ===== CONFIRMAÇÃO E CRIAÇÃO =====
+function confirmarSelecao() {
+    const selecionados = document.querySelectorAll('.produto-check:checked').length;
+    
+    if (selecionados === 0) {
+        alert('Selecione pelo menos um produto para o inventário parcial.');
+        return;
+    }
+    
+    document.getElementById('modalQuantidade').textContent = selecionados;
+    new bootstrap.Modal(document.getElementById('modalConfirmarSelecao')).show();
+}
+
+function criarInventarioParcial() {
+    const produtosSelecionados = [];
+    document.querySelectorAll('.produto-check:checked').forEach(cb => {
+        produtosSelecionados.push(cb.value);
+    });
+    
+    console.log('Produtos selecionados:', produtosSelecionados);
+    
+    if (produtosSelecionados.length === 0) {
+        alert('Nenhum produto selecionado!');
+        return;
+    }
+    
+    // Guardar os IDs no campo oculto
+    document.getElementById('produtosSelecionados').value = JSON.stringify(produtosSelecionados);
+    
+    // Fechar o modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarSelecao'));
+    if (modal) modal.hide();
+    
+    // Submeter o formulário
+    document.getElementById('formInventario').submit();
+}
+
+// ===== EVENT LISTENERS =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado - Inicializando...');
+    
+    // Carregar dados do sistema (AGORA USA API)
+    carregarDadosSistema();
+    
+    // Verificar se veio com tipo pré-selecionado
+    const tipoInicial = document.querySelector('input[name="tipo"]:checked');
+    if (tipoInicial) {
+        selecionarTipo(tipoInicial.value);
+    }
+    
+    // Filtros com debounce
+    const buscaInput = document.getElementById('buscaProduto');
+    let timeoutId;
+    
+    if (buscaInput) {
+        buscaInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(filtrarProdutos, 300);
+        });
+    }
+    
+    // Filtro de modelo
+    const filtroModelo = document.getElementById('filtroModelo');
+    if (filtroModelo) {
+        filtroModelo.addEventListener('change', filtrarProdutos);
+    }
+    
+    // Filtro de status
+    const filtroStatus = document.getElementById('filtroStatus');
+    if (filtroStatus) {
+        filtroStatus.addEventListener('change', filtrarProdutos);
+    }
+    
+    // Delegar evento de change para checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('produto-check')) {
+            atualizarContadorSelecionados();
+        }
+    });
+    
+    // Clique na linha para marcar checkbox
+    document.querySelectorAll('.produto-row').forEach(linha => {
+        linha.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox' && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+                const checkbox = this.querySelector('.produto-check');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    atualizarContadorSelecionados();
+                }
+            }
+        });
+    });
+    
+    // Inicializar filtros
+    setTimeout(() => {
+        filtrarProdutos();
+        atualizarContadorSelecionados();
+    }, 200);
+});
+</script>
+
+<style>
+.tipo-card {
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 100%;
+}
+.tipo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.tipo-card.selected {
+    border-width: 2px;
+    background-color: #f8f9fa;
+}
+.tipo-card input[type="radio"] {
+    cursor: pointer;
+}
+.produto-row {
+    cursor: pointer;
+}
+.produto-row:hover {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+.row.g-0 {
+    margin-left: 0;
+    margin-right: 0;
+}
+.pe-2 {
+    padding-right: 0.5rem !important;
+}
+</style>
+{% endblock %}

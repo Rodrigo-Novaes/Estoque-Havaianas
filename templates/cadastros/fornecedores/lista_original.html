@@ -1,0 +1,447 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Fornecedores - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-truck me-2"></i>Gerenciar Fornecedores
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('novo_fornecedor') }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-building-add me-1"></i> Novo Fornecedor
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button class="dropdown-item" onclick="exportarCSV()">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar CSV
+            </button>
+        </li>
+        <li>
+            <button class="dropdown-item" onclick="imprimirLista()">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Container para mensagens AJAX -->
+<div id="mensagens-container"></div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total de Fornecedores</h6>
+                        <h2 class="mb-0">{{ total_fornecedores }}</h2>
+                    </div>
+                    <i class="bi bi-building fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Fornecedores Ativos</h6>
+                        <h2 class="mb-0">{{ ativos }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Fornecedores Inativos</h6>
+                        <h2 class="mb-0">{{ inativos }}</h2>
+                    </div>
+                    <i class="bi bi-pause-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('lista_fornecedores') }}" id="formFiltros">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label"><i class="bi bi-search me-1"></i>Buscar Fornecedor</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-building"></i></span>
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="Razão Social, CNPJ, Cidade..." 
+                               value="{{ busca or '' }}">
+                        {% if busca %}
+                        <a href="{{ url_for('lista_fornecedores') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><i class="bi bi-funnel me-1"></i>Status</label>
+                    <select class="form-select" name="status" onchange="this.form.submit()">
+                        <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+                        <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativos</option>
+                        <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel me-1"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Fornecedores -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Lista de Fornecedores</h5>
+        <span class="badge bg-secondary">{{ fornecedores|length }} fornecedor(es) encontrado(s)</span>
+    </div>
+    <div class="card-body p-0">
+        {% if fornecedores %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">#</th>
+                        <th width="25%">Razão Social</th>
+                        <th width="15%">CNPJ</th>
+                        <th width="20%">Contato</th>
+                        <th width="15%">Localização</th>
+                        <th width="10%">Status</th>
+                        <th width="10%">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for forn in fornecedores %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2 {% if not forn.ativo %}bg-secondary{% else %}bg-primary{% endif %}">
+                                    <span class="text-white">{{ forn.razao_social[:1]|upper }}</span>
+                                </div>
+                                <div>
+                                    <strong>{{ forn.razao_social }}</strong>
+                                    {% if forn.nome_fantasia and forn.nome_fantasia != forn.razao_social %}
+                                    <br><small class="text-muted">{{ forn.nome_fantasia }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="cnpj">{{ forn.cnpj }}</span>
+                            {% if forn.inscricao_estadual %}
+                            <br><small class="text-muted">IE: {{ forn.inscricao_estadual }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if forn.email %}
+                            <div><i class="bi bi-envelope me-1"></i>{{ forn.email|truncate(20) }}</div>
+                            {% endif %}
+                            {% if forn.telefone %}
+                            <div><i class="bi bi-telephone me-1"></i><span class="telefone">{{ forn.telefone }}</span></div>
+                            {% endif %}
+                            {% if forn.celular %}
+                            <div><i class="bi bi-phone me-1"></i><span class="celular">{{ forn.celular }}</span></div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if forn.cidade %}
+                                <i class="bi bi-geo-alt me-1"></i>{{ forn.cidade }}{% if forn.estado %}/{{ forn.estado }}{% endif %}
+                                {% if forn.responsavel %}
+                                <br><small class="text-muted">Resp: {{ forn.responsavel|truncate(15) }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">---</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if forn.ativo %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <!-- Visualizar Detalhes -->
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="verDetalhes('{{ forn.id }}')" title="Visualizar">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <!-- Editar Fornecedor -->
+                                <a href="{{ url_for('editar_fornecedor', id=forn.id) }}" 
+                                   class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <!-- Ativar/Desativar -->
+                                <form method="POST" action="{{ url_for('toggle_fornecedor', id=forn.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ 'success' if not forn.ativo else 'secondary' }}" 
+                                            title="{{ 'Ativar' if not forn.ativo else 'Inativar' }}">
+                                        <i class="bi bi-{{ 'play' if not forn.ativo else 'pause' }}-circle"></i>
+                                    </button>
+                                </form>
+                                <!-- Excluir -->
+                                <form method="POST" action="{{ url_for('excluir_fornecedor', id=forn.id) }}" 
+                                      class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja excluir este fornecedor?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                            title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-building display-1 text-muted"></i>
+            <h4 class="mt-3">Nenhum fornecedor encontrado</h4>
+            <p class="text-muted">
+                {% if busca %}
+                    Nenhum fornecedor corresponde à busca "{{ busca }}".<br>
+                    <a href="{{ url_for('lista_fornecedores') }}" class="btn btn-link">Limpar busca</a>
+                {% elif status == 'inativos' %}
+                    Não há fornecedores inativos no momento.
+                {% elif status == 'todos' and not fornecedores %}
+                    Nenhum fornecedor cadastrado ainda.
+                {% else %}
+                    Comece cadastrando seu primeiro fornecedor.
+                {% endif %}
+            </p>
+            {% if not busca %}
+            <a href="{{ url_for('novo_fornecedor') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-building-add me-2"></i>Novo Fornecedor
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Detalhes do Fornecedor -->
+<div class="modal fade" id="modalDetalhes" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-building me-2"></i>Detalhes do Fornecedor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalhesContent">
+                <div class="text-center">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <a href="#" id="btnEditarModal" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i> Editar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============================================
+// FUNÇÕES PARA FORNECEDORES
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    formatarContato();
+    formatarCNPJ();
+});
+
+// Formatar CNPJ
+function formatarCNPJ() {
+    document.querySelectorAll('.cnpj').forEach(function(el) {
+        let valor = el.textContent.trim();
+        if (valor && valor !== 'None' && valor.length === 14) {
+            el.textContent = valor.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+        }
+    });
+}
+
+// Formatar telefone/celular
+function formatarContato() {
+    document.querySelectorAll('.telefone').forEach(function(el) {
+        let valor = el.textContent.trim();
+        if (valor && valor !== 'None' && valor.length === 10) {
+            el.textContent = valor.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+        }
+    });
+    
+    document.querySelectorAll('.celular').forEach(function(el) {
+        let valor = el.textContent.trim();
+        if (valor && valor !== 'None' && valor.length === 11) {
+            el.textContent = valor.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        }
+    });
+}
+
+// Ver detalhes do fornecedor
+function verDetalhes(id) {
+    const modal = new bootstrap.Modal(document.getElementById('modalDetalhes'));
+    modal.show();
+    
+    document.getElementById('btnEditarModal').href = `/fornecedor/editar/${id}`;
+    
+    fetch(`/api/fornecedores/${id}`)
+        .then(response => response.json())
+        .then(fornecedor => {
+            document.getElementById('detalhesContent').innerHTML = gerarHtmlDetalhes(fornecedor);
+        })
+        .catch(error => {
+            document.getElementById('detalhesContent').innerHTML = '<div class="alert alert-danger">Erro ao carregar dados do fornecedor.</div>';
+        });
+}
+
+// Gerar HTML dos detalhes
+function gerarHtmlDetalhes(f) {
+    let html = '<div class="row">';
+    
+    html += '<div class="col-md-6"><div class="card mb-3"><div class="card-header bg-light">Dados da Empresa</div><div class="card-body">';
+    html += '<p><strong>Razão Social:</strong> ' + (f.razao_social || '') + '</p>';
+    html += '<p><strong>Nome Fantasia:</strong> ' + (f.nome_fantasia || '-') + '</p>';
+    html += '<p><strong>CNPJ:</strong> ' + (f.cnpj || '') + '</p>';
+    html += '<p><strong>Inscrição Estadual:</strong> ' + (f.inscricao_estadual || '-') + '</p>';
+    html += '<p><strong>Status:</strong> ' + (f.ativo ? 'Ativo' : 'Inativo') + '</p>';
+    html += '</div></div></div>';
+    
+    html += '<div class="col-md-6"><div class="card mb-3"><div class="card-header bg-light">Contato</div><div class="card-body">';
+    html += '<p><strong>Responsável:</strong> ' + (f.responsavel || '-') + '</p>';
+    html += '<p><strong>E-mail:</strong> ' + (f.email || '-') + '</p>';
+    html += '<p><strong>Telefone:</strong> ' + (f.telefone || '-') + '</p>';
+    html += '<p><strong>Celular:</strong> ' + (f.celular || '-') + '</p>';
+    html += '</div></div></div>';
+    
+    html += '<div class="col-12"><div class="card mb-3"><div class="card-header bg-light">Endereço</div><div class="card-body">';
+    if (f.logradouro) {
+        html += f.logradouro + ', ' + (f.numero || 'S/N');
+        if (f.complemento) html += ' - ' + f.complemento;
+        html += '<br>';
+        if (f.bairro) html += f.bairro + '<br>';
+        html += (f.cidade || '') + (f.estado ? '/' + f.estado : '') + '<br>';
+        html += 'CEP: ' + (f.cep || '');
+    } else {
+        html += 'Não informado';
+    }
+    html += '</div></div></div>';
+    
+    if (f.observacoes) {
+        html += '<div class="col-12"><div class="card"><div class="card-header bg-light">Observações</div><div class="card-body">' + f.observacoes + '</div></div></div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+// Exportar CSV
+function exportarCSV() {
+    showMensagem('Funcionalidade de exportação CSV em desenvolvimento', 'info');
+}
+
+// Imprimir lista
+function imprimirLista() {
+    window.print();
+}
+
+// Mostrar mensagens
+function showMensagem(message, type) {
+    const container = document.getElementById('mensagens-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show flash-message`;
+    alertDiv.role = 'alert';
+    alertDiv.style.padding = '0.75rem 1rem';
+    alertDiv.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;"><span style="padding-right: 20px;">✅ ' + message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0; position: static; transform: none;"></button></div>';
+    container.appendChild(alertDiv);
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+            bsAlert.close();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    background-color: #0d6efd;
+}
+.avatar-circle.bg-secondary {
+    background-color: #6c757d;
+}
+.table td {
+    vertical-align: middle;
+}
+.opacity-50 {
+    opacity: 0.5;
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+@media print {
+    .btn-group, .btn, .dropdown, .modal {
+        display: none !important;
+    }
+}
+@media (max-width: 768px) {
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.4rem;
+    }
+}
+</style>
+{% endblock %}

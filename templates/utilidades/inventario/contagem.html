@@ -1,0 +1,520 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Contagem de Inventário #{{ inventario.id }}{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-clipboard-check me-2"></i>Contagem de Inventário #{{ inventario.id }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+    <button type="button" class="btn btn-sm btn-success" onclick="finalizarContagem()">
+        <i class="bi bi-check-circle me-1"></i> Finalizar Contagem
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Informações da Contagem -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="content-card text-center">
+            <small class="text-muted">Status</small>
+            <h4>
+                <span class="badge bg-warning text-dark">Em Andamento</span>
+            </h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card text-center">
+            <small class="text-muted">Data Início</small>
+            <h5>{{ inventario.data_inicio.strftime('%d/%m/%Y %H:%M') }}</h5>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card text-center">
+            <small class="text-muted">Tipo</small>
+            <h5>
+                {% if inventario.tipo == 'COMPLETO' %}
+                    <span class="badge bg-primary">Completo</span>
+                {% elif inventario.tipo == 'PARCIAL' %}
+                    <span class="badge bg-info">Parcial</span>
+                {% else %}
+                    <span class="badge bg-warning">Ajuste</span>
+                {% endif %}
+            </h5>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card text-center">
+            <small class="text-muted">Progresso</small>
+            {% set total = inventario.contagens|length %}
+            {% set conferidos = inventario.contagens|selectattr('quantidade_contada', '!=', 0)|list|length %}
+            {% set percentual = (conferidos / total * 100) if total > 0 else 0 %}
+            <h5>{{ conferidos }}/{{ total }}</h5>
+            <div class="progress" style="height: 5px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ percentual }}%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTROS INTELIGENTES - BUSCA EM TEMPO REAL -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-0">
+            <!-- Busca -->
+            <div class="col-md-8 pe-2">
+                <label class="form-label fw-bold"><i class="bi bi-search me-1"></i>Buscar Itens</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <input type="text" class="form-control" id="buscaProduto"
+                           placeholder="SKU, Produto, Cor, Tamanho..." 
+                           value=""
+                           autocomplete="off">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparBusca()" title="Limpar busca" style="display: none;" id="limpar-busca">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <small class="text-muted">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> Busca em tempo real
+                </small>
+            </div>
+            
+            <!-- Status -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i>Status</label>
+                <div class="input-group">
+                    <select class="form-select" id="filtroStatus" onchange="filtrarItens()">
+                        <option value="todos">Todos os itens</option>
+                        <option value="pendente">Pendentes</option>
+                        <option value="conferido">Conferidos</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroStatus()" title="Limpar filtro" style="display: none;" id="limpar-status">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status atual dos filtros -->
+        <div class="mt-3 p-2 bg-light rounded">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <i class="bi bi-info-circle text-primary"></i>
+                <span class="fw-bold">Mostrando:</span>
+                
+                <!-- Badge de Status (dinâmico via JS) -->
+                <span class="badge px-3 py-2" id="badge-status" style="display: none;"></span>
+                
+                <!-- Badge de Busca (dinâmico via JS) -->
+                <span class="badge bg-secondary px-3 py-2" id="badge-busca" style="display: none;"></span>
+                
+                <!-- Resultados -->
+                <span class="badge bg-dark px-3 py-2 ms-auto" id="contador-resultados">
+                    <i class="bi bi-list-ul me-1"></i>{{ inventario.contagens|length }} item(ns)
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Itens para Contagem -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Itens para Contagem</h5>
+        <span class="badge bg-secondary" id="contador-itens">
+            {{ conferidos }}/{{ total }} itens conferidos
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3" id="itensContainer">
+            {% for item in inventario.contagens %}
+            <div class="col-md-6 col-lg-4 item-card" 
+                 id="item-card-{{ item.id }}"
+                 data-status="{% if item.quantidade_contada > 0 %}conferido{% else %}pendente{% endif %}"
+                 data-sku="{{ item.grade.sku_grade|lower }}"
+                 data-produto="{{ item.grade.produto.descricao|lower }}"
+                 data-cor="{{ item.grade.cor|lower }}"
+                 data-tamanho="{{ item.grade.tamanho|lower }}"
+                 data-search="{{ item.grade.sku_grade|lower }} {{ item.grade.produto.descricao|lower }} {{ item.grade.cor|lower }} {{ item.grade.tamanho|lower }}">
+                <div class="card border {% if item.quantidade_contada > 0 %}border-success{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-secondary">{{ item.grade.sku_grade }}</span>
+                                {% if item.quantidade_contada > 0 %}
+                                <span class="badge bg-success ms-1">Conferido</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-muted small">Sistema: {{ item.quantidade_sistema }}</span>
+                        </div>
+                        
+                        <h6 class="card-title mb-1">{{ item.grade.produto.descricao }}</h6>
+                        <p class="card-text small text-muted mb-2">
+                            {{ item.grade.cor }} - Tamanho {{ item.grade.tamanho }}
+                        </p>
+                        
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <input type="number" class="form-control form-control-sm quantidade-contada" 
+                                       id="qtd-{{ item.id }}" 
+                                       data-item-id="{{ item.id }}"
+                                       value="{{ item.quantidade_contada or '' }}" 
+                                       placeholder="Quantidade"
+                                       min="0">
+                            </div>
+                            <div class="col-5">
+                                <button class="btn btn-sm btn-outline-primary w-100 btn-proximo" type="button">
+                                    <i class="bi bi-arrow-down"></i> Próximo
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {% if item.quantidade_contada and item.quantidade_contada != item.quantidade_sistema and item.quantidade_contada > 0 %}
+                        <div class="alert alert-warning py-1 px-2 mt-2 mb-0 small diferenca-alert">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Diferença: {{ item.quantidade_contada - item.quantidade_sistema }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Mensagem de nenhum item encontrado -->
+        <div id="semResultados" class="text-center py-5" style="display: none;">
+            <i class="bi bi-search display-1 text-muted"></i>
+            <h4 class="mt-3">Nenhum item encontrado</h4>
+            <p class="text-muted" id="mensagemSemResultados">
+                Tente ajustar seus filtros ou busca.
+            </p>
+            <button class="btn btn-primary mt-3" onclick="limparTodosFiltros()">
+                <i class="bi bi-eraser me-2"></i>Limpar todos os filtros
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Barra de Ações Rápidas (fixa no rodapé) -->
+<div class="fixed-bottom bg-white border-top p-3" style="z-index: 1020;">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle text-primary me-2"></i>
+                    <span class="text-muted" id="resumo-contagem">
+                        <strong>{{ conferidos }}</strong> de <strong>{{ total }}</strong> itens conferidos
+                        ({{ percentual|round|int }}%)
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <button type="button" class="btn btn-success me-2" onclick="finalizarContagem()">
+                    <i class="bi bi-check-circle me-1"></i> Finalizar Contagem
+                </button>
+                <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i> Cancelar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Finalizar -->
+<div class="modal fade" id="modalFinalizar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Finalizar Contagem</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja finalizar esta contagem?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Após finalizar, os ajustes serão aplicados no estoque.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Resumo da Contagem:</label>
+                    <ul class="list-group" id="resumo-modal">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total de Itens
+                            <span class="badge bg-primary rounded-pill" id="modal-total">{{ total }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Itens Conferidos
+                            <span class="badge bg-success rounded-pill" id="modal-conferidos">{{ conferidos }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Itens com Divergência
+                            <span class="badge bg-warning rounded-pill" id="modal-divergencias">
+                                {% set divergencias = 0 %}
+                                {% for item in inventario.contagens %}
+                                    {% if item.quantidade_contada > 0 and item.quantidade_contada != item.quantidade_sistema %}
+                                        {% set divergencias = divergencias + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ divergencias }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url_for('finalizar_inventario', id=inventario.id) }}">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Sim, finalizar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variável oculta com o ID do inventário -->
+<input type="hidden" id="inventario-id" value="{{ inventario.id }}">
+
+<style>
+/* Ajuste para o rodapé fixo */
+body {
+    margin-bottom: 80px;
+}
+
+.item-card {
+    transition: transform 0.2s;
+}
+
+.item-card:hover {
+    transform: translateY(-2px);
+}
+
+.card.border-success {
+    border-width: 2px;
+}
+
+/* Estilo para input de quantidade */
+.quantidade-contada:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+</style>
+
+<script>
+// Variáveis globais
+let timeoutId;
+let buscaAtual = '';
+let statusAtual = 'todos';
+
+// Função para filtrar itens
+function filtrarItens() {
+    const buscaInput = document.getElementById('buscaProduto');
+    const filtroSelect = document.getElementById('filtroStatus');
+    const itens = document.querySelectorAll('.item-card');
+    const semResultados = document.getElementById('semResultados');
+    const badgeStatus = document.getElementById('badge-status');
+    const badgeBusca = document.getElementById('badge-busca');
+    const btnLimparBusca = document.getElementById('limpar-busca');
+    const btnLimparStatus = document.getElementById('limpar-status');
+    
+    buscaAtual = buscaInput.value.toLowerCase().trim();
+    statusAtual = filtroSelect.value;
+    
+    let visiveis = 0;
+    
+    itens.forEach(item => {
+        let mostrar = true;
+        const searchText = item.dataset.search;
+        const status = item.dataset.status;
+        
+        // Filtro de busca
+        if (buscaAtual && !searchText.includes(buscaAtual)) {
+            mostrar = false;
+        }
+        
+        // Filtro de status
+        if (statusAtual !== 'todos' && status !== statusAtual) {
+            mostrar = false;
+        }
+        
+        item.style.display = mostrar ? 'block' : 'none';
+        if (mostrar) visiveis++;
+    });
+    
+    // Atualizar badges
+    if (statusAtual !== 'todos') {
+        badgeStatus.style.display = 'inline-block';
+        badgeStatus.className = `badge px-3 py-2 ${statusAtual === 'pendente' ? 'bg-warning text-dark' : 'bg-success'}`;
+        badgeStatus.innerHTML = statusAtual === 'pendente' ? 
+            '<i class="bi bi-hourglass-split me-1"></i>Pendentes' : 
+            '<i class="bi bi-check-circle me-1"></i>Conferidos';
+        btnLimparStatus.style.display = 'block';
+    } else {
+        badgeStatus.style.display = 'none';
+        btnLimparStatus.style.display = 'none';
+    }
+    
+    if (buscaAtual) {
+        badgeBusca.style.display = 'inline-block';
+        badgeBusca.innerHTML = `<i class="bi bi-search me-1"></i>"${buscaAtual}"`;
+        btnLimparBusca.style.display = 'block';
+    } else {
+        badgeBusca.style.display = 'none';
+        btnLimparBusca.style.display = 'none';
+    }
+    
+    // Atualizar contador de resultados
+    document.getElementById('contador-resultados').innerHTML = `<i class="bi bi-list-ul me-1"></i>${visiveis} item(ns)`;
+    
+    // Mostrar/esconder mensagem de sem resultados
+    semResultados.style.display = visiveis === 0 ? 'block' : 'none';
+    
+    // Atualizar mensagem de sem resultados
+    if (visiveis === 0) {
+        let mensagem = 'Nenhum item encontrado';
+        if (buscaAtual && statusAtual !== 'todos') {
+            mensagem = `Nenhum item ${statusAtual === 'pendente' ? 'pendente' : 'conferido'} corresponde a "${buscaAtual}"`;
+        } else if (buscaAtual) {
+            mensagem = `Nenhum item corresponde a "${buscaAtual}"`;
+        } else if (statusAtual !== 'todos') {
+            mensagem = `Nenhum item ${statusAtual === 'pendente' ? 'pendente' : 'conferido'} encontrado`;
+        }
+        document.getElementById('mensagemSemResultados').textContent = mensagem;
+    }
+}
+
+// Função para limpar busca
+function limparBusca() {
+    document.getElementById('buscaProduto').value = '';
+    filtrarItens();
+    document.getElementById('buscaProduto').focus();
+}
+
+// Função para limpar filtro de status
+function limparFiltroStatus() {
+    document.getElementById('filtroStatus').value = 'todos';
+    filtrarItens();
+}
+
+// Função para limpar todos os filtros
+function limparTodosFiltros() {
+    document.getElementById('buscaProduto').value = '';
+    document.getElementById('filtroStatus').value = 'todos';
+    filtrarItens();
+    document.getElementById('buscaProduto').focus();
+}
+
+// Função para atualizar quantidade via AJAX
+function atualizarQuantidade(itemId, valor) {
+    clearTimeout(timeoutId);
+    
+    timeoutId = setTimeout(() => {
+        fetch(`/inventario/item/${itemId}/atualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ quantidade: parseInt(valor) || 0 })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recarregar a página para atualizar todos os dados
+                window.location.reload();
+            }
+        })
+        .catch(error => console.error('Erro:', error));
+    }, 500);
+}
+
+// Função para focar no próximo input
+function focarProximo(botao) {
+    const inputs = document.querySelectorAll('.quantidade-contada:visible');
+    const currentInput = botao.closest('.row').querySelector('.quantidade-contada');
+    
+    for (let i = 0; i < inputs.length; i++) {
+        if (inputs[i] === currentInput) {
+            if (inputs[i + 1]) {
+                inputs[i + 1].focus();
+            }
+            break;
+        }
+    }
+}
+
+// Função para finalizar contagem
+function finalizarContagem() {
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizar'));
+    modal.show();
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar inputs de quantidade
+    document.querySelectorAll('.quantidade-contada').forEach(input => {
+        const itemId = input.getAttribute('data-item-id');
+        
+        input.addEventListener('input', function() {
+            atualizarQuantidade(itemId, this.value);
+        });
+        
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const btnProximo = this.closest('.row').querySelector('.btn-proximo');
+                if (btnProximo) {
+                    focarProximo(btnProximo);
+                }
+            }
+        });
+    });
+    
+    // Configurar botões próximo
+    document.querySelectorAll('.btn-proximo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            focarProximo(this);
+        });
+    });
+    
+    // Configurar busca em tempo real
+    const buscaInput = document.getElementById('buscaProduto');
+    if (buscaInput) {
+        buscaInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(filtrarItens, 300);
+        });
+    }
+    
+    // Configurar filtro de status
+    const filtroSelect = document.getElementById('filtroStatus');
+    if (filtroSelect) {
+        filtroSelect.addEventListener('change', filtrarItens);
+    }
+    
+    // Atalhos de teclado
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+F para focar na busca
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('buscaProduto')?.focus();
+        }
+        
+        // Esc para limpar busca
+        if (e.key === 'Escape') {
+            const buscaInput = document.getElementById('buscaProduto');
+            if (buscaInput && buscaInput.value) {
+                limparBusca();
+            }
+        }
+    });
+    
+    // Inicializar filtros
+    filtrarItens();
+});
+</script>
+{% endblock %}

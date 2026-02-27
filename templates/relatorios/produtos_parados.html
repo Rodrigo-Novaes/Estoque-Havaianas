@@ -1,0 +1,981 @@
+{% extends "layout/base.html" %} {% block title %}Produtos Parados - Havaianas{%
+endblock %} {% block page_title %}
+<i class="bi bi-clock-history me-2"></i>Produtos Parados {% endblock %} {% block
+page_actions %}
+<div class="btn-group">
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-primary"
+    onclick="window.print()"
+  >
+    <i class="bi bi-printer me-1"></i> Imprimir
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-warning"
+    onclick="gerarPlanoAcao()"
+  >
+    <i class="bi bi-lightbulb me-1"></i> Plano de Ação
+  </button>
+</div>
+{% endblock %} {% block content %}
+<!-- Filtros Automáticos - COM BOTÕES LIMPAR INDIVIDUAIS (SEM CHECK VERDE) -->
+<div class="card mb-4">
+  <div class="card-header bg-light">
+    <h6 class="mb-0">
+      <i class="bi bi-funnel me-2"></i>Filtros Automáticos
+      <small class="text-muted float-end" id="statusFiltro">Sem filtros</small>
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small">Mínimo de Dias</label>
+        <div class="input-group">
+          <input
+            type="number"
+            class="form-control form-control-sm"
+            id="filtroDiasMin"
+            placeholder="Ex: 30"
+            min="1"
+          />
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltroIndividual('diasMin')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-diasMin"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <small class="text-muted">Padrão: 30 dias</small>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Máximo de Dias</label>
+        <div class="input-group">
+          <input
+            type="number"
+            class="form-control form-control-sm"
+            id="filtroDiasMax"
+            placeholder="Ex: 90"
+            min="1"
+          />
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltroIndividual('diasMax')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-diasMax"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Estoque</label>
+        <div class="input-group">
+          <select class="form-select form-select-sm" id="filtroEstoque">
+            <option value="">Todos os estoques</option>
+            <option value="critico">Crítico (>20 unidades)</option>
+            <option value="alto">Alto (11-20 unidades)</option>
+            <option value="medio">Médio (6-10 unidades)</option>
+            <option value="baixo">Baixo (1-5 unidades)</option>
+          </select>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltroIndividual('estoque')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-estoque"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Buscar</label>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            id="filtroBusca"
+            placeholder="SKU, descrição, modelo..."
+          />
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltroIndividual('busca')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-busca"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alertas -->
+<div class="alert alert-warning mb-4">
+  <div class="d-flex">
+    <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+    <div>
+      <h6 class="alert-heading">Produtos sem venda há mais de 30 dias</h6>
+      <p class="mb-0">
+        Estes produtos têm estoque disponível mas não foram vendidos nos últimos
+        30 dias. Considere promover, reavaliar preço ou criar estratégias de
+        venda.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Estatísticas Dinâmicas -->
+<div class="row mb-4">
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-warning h-100">
+      <div class="card-body text-center">
+        <h6 class="text-warning">Produtos Parados</h6>
+        <h2 class="mb-0" id="totalProdutos">{{ total_produtos_parados }}</h2>
+        <small class="text-muted">Sem venda recente</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-danger h-100">
+      <div class="card-body text-center">
+        <h6 class="text-danger">Estoque Parado</h6>
+        <h2 class="mb-0" id="totalEstoque">{{ total_estoque_parado }}</h2>
+        <small class="text-muted">Unidades paradas</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-info h-100">
+      <div class="card-body text-center">
+        <h6 class="text-info">Valor Investido</h6>
+        <h2 class="mb-0" id="totalValor">
+          {{ valor_total_parado|format_currency }}
+        </h2>
+        <small class="text-muted">Custo do estoque parado</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-success h-100">
+      <div class="card-body text-center">
+        <h6 class="text-success">Potencial</h6>
+        <h2 class="mb-0" id="totalPotencial">
+          {{ (valor_total_parado * 2)|format_currency }}
+        </h2>
+        <small class="text-muted">Valor potencial em vendas</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de Produtos Parados -->
+<div class="card">
+  <div
+    class="card-header bg-white border-bottom d-flex justify-content-between align-items-center"
+  >
+    <div>
+      <h5 class="mb-0">
+        <i class="bi bi-list-check me-2"></i>
+        Produtos sem Venda Recente
+      </h5>
+      <small class="text-muted">Ordenado por tempo sem venda</small>
+    </div>
+    <span class="badge bg-warning" id="badgeTotal"
+      >{{ total_produtos_parados }} produtos</span
+    >
+  </div>
+
+  <div class="card-body p-0">
+    {% if produtos_parados %}
+    <div class="table-responsive">
+      <table class="table table-hover" id="tabela-produtos-parados">
+        <thead class="table-light">
+          <tr>
+            <th width="35%">Produto</th>
+            <th width="15%">Estoque</th>
+            <th width="15%">Dias sem Venda</th>
+            <th width="15%">Custo Parado</th>
+            <th width="10%">Última Mov.</th>
+            <th width="10%">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela">
+          {% for produto_data in produtos_parados %} {% set produto =
+          produto_data.produto %} {% set dias_sem_venda =
+          produto_data.dias_sem_venda %}
+
+          <tr
+            class="{% if dias_sem_venda > 60 %}table-danger{% elif dias_sem_venda > 45 %}table-warning{% endif %}"
+            data-dias="{{ dias_sem_venda }}"
+            data-estoque="{{ produto_data.total_estoque }}"
+            data-sku="{{ produto.sku|lower }}"
+            data-descricao="{{ produto.descricao|lower }}"
+            data-modelo="{{ produto.modelo|lower if produto.modelo else '' }}"
+            data-valor="{{ produto_data.custo_total }}"
+          >
+            <td style="padding-left: 25px !important">
+              <div class="d-flex align-items-start" style="position: relative">
+                <!-- ===== THUMBNAIL COM MAIS ESPAÇO À ESQUERDA ===== -->
+                <div
+                  class="imagem-container me-3"
+                  style="
+                    width: 50px;
+                    height: 50px;
+                    flex-shrink: 0;
+                    margin-left: 5px;
+                  "
+                >
+                  {% if produto.imagem %}
+                  <img
+                    src="{{ url_for('uploaded_file', filename='thumb_' + produto.imagem) }}"
+                    class="produto-thumbnail"
+                    style="
+                      width: 50px;
+                      height: 50px;
+                      object-fit: contain;
+                      border: 1px solid #dee2e6;
+                      background-color: #f8f9fa;
+                      border-radius: 4px;
+                      cursor: pointer;
+                    "
+                    alt="{{ produto.descricao }}"
+                    onclick="ampliarImagem(this)"
+                  />
+                  {% else %}
+                  <div
+                    class="d-flex align-items-center justify-content-center"
+                    style="
+                      width: 50px;
+                      height: 50px;
+                      background-color: #f8f9fa;
+                      border-radius: 4px;
+                      border: 1px solid #dee2e6;
+                    "
+                  >
+                    <i
+                      class="bi bi-image text-muted"
+                      style="font-size: 1.5rem"
+                    ></i>
+                  </div>
+                  {% endif %}
+                </div>
+                <!-- ===== FIM DO THUMBNAIL ===== -->
+
+                <div style="margin-left: 5px">
+                  <h6 class="mb-1">
+                    {{ produto.descricao[:40] }}{% if produto.descricao|length >
+                    40 %}...{% endif %}
+                  </h6>
+                  <div class="d-flex flex-wrap gap-1">
+                    <span class="badge bg-dark">{{ produto.sku }}</span>
+                    {% if produto.modelo %}
+                    <span class="badge bg-secondary">{{ produto.modelo }}</span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark border"
+                      >{{ produto.genero or '' }}</span
+                    >
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    {{ produto.colecao or 'Sem coleção' }} • {{ produto.tipo or
+                    '' }}
+                  </small>
+                </div>
+              </div>
+            </td>
+
+            <td class="text-center">
+              <span
+                class="badge {% if produto_data.total_estoque > 20 %}bg-danger{% elif produto_data.total_estoque > 10 %}bg-warning{% else %}bg-info{% endif %} fs-6"
+              >
+                {{ produto_data.total_estoque }} un
+              </span>
+            </td>
+
+            <td class="text-center">
+              <div class="d-flex flex-column align-items-center">
+                <span
+                  class="badge {% if dias_sem_venda > 60 %}bg-danger{% elif dias_sem_venda > 45 %}bg-warning{% else %}bg-secondary{% endif %} fs-6"
+                >
+                  {{ dias_sem_venda }} dias
+                </span>
+                <small class="text-muted">
+                  {% if dias_sem_venda > 60 %}
+                  <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                  Crítico {% elif dias_sem_venda > 45 %}
+                  <i class="bi bi-exclamation-circle-fill text-warning"></i>
+                  Alerta {% else %} Atenção {% endif %}
+                </small>
+              </div>
+            </td>
+
+            <td class="text-center">
+              <span class="fw-bold text-danger"
+                >{{ produto_data.custo_total|format_currency }}</span
+              >
+              <small class="text-muted d-block">
+                Custo: {{ produto.custo|format_currency if produto.custo else
+                15|format_currency }}
+              </small>
+            </td>
+
+            <td class="text-center">
+              {% set ultima_mov = produto.movimentacoes|sort(attribute='data',
+              reverse=true)|first if produto.movimentacoes else None %} {% if
+              ultima_mov %}
+              <small class="text-muted"
+                >{{ ultima_mov.data.strftime('%d/%m/%Y') if ultima_mov.data else
+                'N/A' }}</small
+              ><br />
+              <small>{{ ultima_mov.tipo or '' }}</small>
+              {% else %}
+              <small class="text-muted">Nenhuma</small>
+              {% endif %}
+            </td>
+
+            <!-- AÇÕES -->
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <a
+                  href="{{ url_for('editar_produto', id=produto.id) }}"
+                  class="btn btn-sm btn-outline-warning"
+                  title="Ajustar produto"
+                >
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a
+                  href="{{ url_for('relatorio_movimentacoes') }}?produto={{ produto.id }}"
+                  class="btn btn-sm btn-outline-info"
+                  title="Ver movimentações"
+                >
+                  <i class="bi bi-arrow-left-right"></i>
+                </a>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  onclick="sugerirPromocao('{{ produto.sku }}', {{ produto_data.total_estoque }}, {{ dias_sem_venda }})"
+                  title="Sugerir promoção"
+                >
+                  <i class="bi bi-tag"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recomendações -->
+    <div class="p-4 border-top">
+      <div class="alert alert-info mb-0">
+        <div class="d-flex">
+          <i class="bi bi-lightbulb-fill me-3 fs-4"></i>
+          <div>
+            <h6 class="alert-heading">Recomendações para Produtos Parados</h6>
+            <ul class="mb-0">
+              <li>
+                <strong>Promoções:</strong> Ofereça desconto de 10-20% para
+                produtos parados há mais de 45 dias
+              </li>
+              <li>
+                <strong>Combos:</strong> Combine produtos parados com produtos
+                populares
+              </li>
+              <li>
+                <strong>Exposição:</strong> Coloque em destaque na vitrine ou
+                prateleira principal
+              </li>
+              <li><strong>Preço:</strong> Reavalie o preço de venda</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Mensagem quando não há produtos parados -->
+    <div class="text-center py-5">
+      <i class="bi bi-check-circle-fill text-success fa-4x mb-3"></i>
+      <h3 class="text-success mb-3">🎉 Excelente Rotatividade!</h3>
+      <p class="text-muted mb-4 lead">
+        Todos os produtos com estoque tiveram movimentação nos últimos 30 dias.
+        Continue monitorando para manter essa excelência.
+      </p>
+      <div class="d-flex justify-content-center gap-3">
+        <a href="{{ url_for('produtos') }}" class="btn btn-outline-primary">
+          <i class="bi bi-box me-1"></i> Ver Todos Produtos
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+          <i class="bi bi-speedometer2 me-1"></i> Voltar ao Dashboard
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal para ampliar imagem (igual ao PDV) -->
+<div class="modal fade" id="modalImagem" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center p-3">
+        <img
+          src=""
+          class="img-fluid"
+          id="imagemAmpliada"
+          style="
+            max-height: 300px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 5px;
+            background-color: #f8f9fa;
+          "
+        />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  // ========== FUNÇÃO PARA AMPLIAR IMAGEM (igual ao PDV) ==========
+  function ampliarImagem(elemento) {
+    const modalImg = document.getElementById("imagemAmpliada");
+    if (elemento && elemento.src) {
+      modalImg.src = elemento.src;
+    }
+    const modal = new bootstrap.Modal(document.getElementById("modalImagem"));
+    modal.show();
+  }
+
+  // Variável para controlar se o DataTable já foi inicializado
+  let dataTableInicializado = false;
+  let tabela = null;
+
+  $(document).ready(function () {
+    // Inicializar DataTable apenas se ainda não foi inicializado
+    if (!dataTableInicializado) {
+      inicializarDataTable();
+      dataTableInicializado = true;
+    }
+
+    // Configurar filtros automáticos
+    configurarFiltros();
+
+    // Aplicar filtros iniciais
+    aplicarFiltros();
+
+    // Verificar estado inicial dos botões
+    verificarBotaoLimpar("diasMin", $("#filtroDiasMin").val());
+    verificarBotaoLimpar("diasMax", $("#filtroDiasMax").val());
+    verificarBotaoLimpar("estoque", $("#filtroEstoque").val());
+    verificarBotaoLimpar("busca", $("#filtroBusca").val());
+  });
+
+  // ============ FUNÇÕES DE CONTROLE DOS BOTÕES LIMPAR ============
+
+  function verificarBotaoLimpar(campoId, valor) {
+    const btnLimpar = $(`#limpar-${campoId}`);
+
+    // Para campo de dias mínimos, só mostra botão se tiver valor E não estiver vazio
+    if (campoId === "diasMin") {
+      if (valor && valor !== "") {
+        btnLimpar.show();
+      } else {
+        btnLimpar.hide();
+      }
+    }
+    // Para outros campos, mostrar se tiver valor
+    else if (valor && valor !== "" && valor !== "0") {
+      btnLimpar.show();
+    } else {
+      btnLimpar.hide();
+    }
+  }
+
+  function limparFiltroIndividual(campoId) {
+    if (campoId === "diasMin") {
+      $("#filtroDiasMin").val("").trigger("keyup");
+      $("#limpar-diasMin").hide();
+    } else if (campoId === "diasMax") {
+      $("#filtroDiasMax").val("").trigger("keyup");
+      $("#limpar-diasMax").hide();
+    } else if (campoId === "estoque") {
+      $("#filtroEstoque").val("").trigger("change");
+      $("#limpar-estoque").hide();
+    } else if (campoId === "busca") {
+      $("#filtroBusca").val("").trigger("keyup");
+      $("#limpar-busca").hide();
+    }
+  }
+
+  function inicializarDataTable() {
+    const tabelaElement = $("#tabela-produtos-parados");
+
+    // Verificar se a tabela existe na página
+    if (tabelaElement.length) {
+      // Destruir DataTable existente antes de criar um novo (se houver)
+      if ($.fn.dataTable.isDataTable(tabelaElement)) {
+        tabelaElement.DataTable().destroy();
+      }
+
+      // Inicializar o DataTable com tradução embutida
+      tabela = tabelaElement.DataTable({
+        language: {
+          sEmptyTable: "Nenhum registro encontrado",
+          sInfo: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+          sInfoEmpty: "Mostrando 0 até 0 de 0 registros",
+          sInfoFiltered: "(Filtrados de _MAX_ registros)",
+          sInfoPostFix: "",
+          sInfoThousands: ".",
+          sLengthMenu: "_MENU_ resultados por página",
+          sLoadingRecords: "Carregando...",
+          sProcessing: "Processando...",
+          sZeroRecords: "Nenhum registro encontrado",
+          sSearch: "Pesquisar:",
+          oPaginate: {
+            sNext: "Próximo",
+            sPrevious: "Anterior",
+            sFirst: "Primeiro",
+            sLast: "Último",
+          },
+          oAria: {
+            sSortAscending: ": Ordenar colunas de forma ascendente",
+            sSortDescending: ": Ordenar colunas de forma descendente",
+          },
+        },
+        pageLength: 25,
+        order: [[2, "desc"]], // Ordenar por "Dias sem Venda" decrescente
+        responsive: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
+        destroy: true, // Permite re-inicialização
+        retrieve: true, // Permite recuperar instância existente
+        initComplete: function () {
+          // Após inicializar, esconder a busca padrão do DataTable
+          $(".dataTables_filter").hide();
+        },
+      });
+    }
+  }
+
+  function configurarFiltros() {
+    // Configurar debounce para inputs
+    let timeoutBusca;
+
+    $("#filtroDiasMin").on("keyup", function () {
+      clearTimeout(timeoutBusca);
+      timeoutBusca = setTimeout(aplicarFiltros, 500);
+      verificarBotaoLimpar("diasMin", $(this).val());
+    });
+
+    $("#filtroDiasMax").on("keyup", function () {
+      clearTimeout(timeoutBusca);
+      timeoutBusca = setTimeout(aplicarFiltros, 500);
+      verificarBotaoLimpar("diasMax", $(this).val());
+    });
+
+    $("#filtroBusca").on("keyup", function () {
+      clearTimeout(timeoutBusca);
+      timeoutBusca = setTimeout(aplicarFiltros, 500);
+      verificarBotaoLimpar("busca", $(this).val());
+    });
+
+    $("#filtroEstoque").on("change", function () {
+      aplicarFiltros();
+      verificarBotaoLimpar("estoque", $(this).val());
+    });
+  }
+
+  function aplicarFiltros() {
+    // Se o campo estiver vazio, considera 30 (padrão)
+    const diasMinInput = $("#filtroDiasMin").val();
+    const diasMin = diasMinInput ? parseInt(diasMinInput) : 30;
+
+    const diasMaxInput = $("#filtroDiasMax").val();
+    const diasMax = diasMaxInput ? parseInt(diasMaxInput) : 999;
+
+    const estoque = $("#filtroEstoque").val();
+    const busca = $("#filtroBusca").val().toLowerCase().trim();
+
+    let totalProdutos = 0;
+    let totalEstoque = 0;
+    let totalValor = 0;
+
+    $("#corpoTabela tr").each(function () {
+      const $linha = $(this);
+      const dias = parseInt($linha.data("dias")) || 0;
+      const estoqueProduto = parseInt($linha.data("estoque")) || 0;
+      const sku = $linha.data("sku") || "";
+      const descricao = $linha.data("descricao") || "";
+      const modelo = $linha.data("modelo") || "";
+      const valor = parseFloat($linha.data("valor")) || 0;
+
+      // Obter texto visível das células
+      const textoProduto = $linha.find("td:first").text().toLowerCase();
+
+      let mostrar = true;
+
+      // Filtro por dias
+      if (dias < diasMin || dias > diasMax) {
+        mostrar = false;
+      }
+
+      // Filtro por estoque
+      if (estoque && mostrar) {
+        if (estoque === "critico" && estoqueProduto <= 20) mostrar = false;
+        else if (
+          estoque === "alto" &&
+          (estoqueProduto <= 10 || estoqueProduto > 20)
+        )
+          mostrar = false;
+        else if (
+          estoque === "medio" &&
+          (estoqueProduto <= 5 || estoqueProduto > 10)
+        )
+          mostrar = false;
+        else if (
+          estoque === "baixo" &&
+          (estoqueProduto > 5 || estoqueProduto === 0)
+        )
+          mostrar = false;
+      }
+
+      // Filtro por busca
+      if (busca && mostrar) {
+        const buscaSku = sku.includes(busca);
+        const buscaDescricao = descricao.includes(busca);
+        const buscaModelo = modelo.includes(busca);
+        const buscaTexto = textoProduto.includes(busca);
+
+        if (!buscaSku && !buscaDescricao && !buscaModelo && !buscaTexto) {
+          mostrar = false;
+        }
+      }
+
+      if (mostrar) {
+        $linha.show();
+        totalProdutos++;
+        totalEstoque += estoqueProduto;
+        totalValor += valor;
+      } else {
+        $linha.hide();
+      }
+    });
+
+    // Atualizar interface
+    atualizarInterface(totalProdutos, totalEstoque, totalValor);
+  }
+
+  function atualizarInterface(totalProdutos, totalEstoque, totalValor) {
+    // Atualizar contadores
+    $("#totalProdutos").text(totalProdutos);
+    $("#totalEstoque").text(totalEstoque);
+    $("#badgeTotal").text(totalProdutos + " produtos");
+
+    // Atualizar valores monetários
+    const valorFormatado = formatarMoedaBrasileira(totalValor);
+    $("#totalValor").text(valorFormatado);
+    $("#totalPotencial").text(formatarMoedaBrasileira(totalValor * 2));
+
+    // Atualizar status do filtro
+    atualizarStatusFiltro();
+  }
+
+  function atualizarStatusFiltro() {
+    const diasMin = $("#filtroDiasMin").val();
+    const diasMax = $("#filtroDiasMax").val();
+    const estoque = $("#filtroEstoque").val();
+    const busca = $("#filtroBusca").val();
+
+    const filtrosAtivos = [];
+
+    // Só considera como filtro se tiver valor (30 é o padrão implícito)
+    if (diasMin) {
+      filtrosAtivos.push(`Mínimo: ${diasMin} dias`);
+    }
+
+    if (diasMax) {
+      filtrosAtivos.push(`Máximo: ${diasMax} dias`);
+    }
+
+    if (estoque) {
+      let textoEstoque = "";
+      if (estoque === "critico") textoEstoque = "Crítico (>20)";
+      else if (estoque === "alto") textoEstoque = "Alto (11-20)";
+      else if (estoque === "medio") textoEstoque = "Médio (6-10)";
+      else if (estoque === "baixo") textoEstoque = "Baixo (1-5)";
+      filtrosAtivos.push(`Estoque: ${textoEstoque}`);
+    }
+
+    if (busca) {
+      filtrosAtivos.push(`Busca: "${busca}"`);
+    }
+
+    if (filtrosAtivos.length > 0) {
+      $("#statusFiltro").text(filtrosAtivos.join(" • "));
+      $(".card-header.bg-light").addClass("border-primary");
+    } else {
+      $("#statusFiltro").text("Sem filtros");
+      $(".card-header.bg-light").removeClass("border-primary");
+    }
+  }
+
+  // Função para formatação brasileira
+  function formatarMoedaBrasileira(valor) {
+    // Converter para número se for string
+    let numero = typeof valor === "string" ? parseFloat(valor) : valor;
+
+    // Verificar se é um número válido
+    if (isNaN(numero)) {
+      return "R$ 0,00";
+    }
+
+    // Formatar com separador de milhar e decimal brasileiro
+    return numero.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function gerarPlanoAcao() {
+    const totalProdutos = $("#totalProdutos").text();
+    const totalValor = $("#totalValor").text();
+
+    const plano = `
+      📋 PLANO DE AÇÃO - PRODUTOS PARADOS
+      ====================================
+      Data: ${new Date().toLocaleDateString("pt-BR")}
+
+      📊 SITUAÇÃO ATUAL:
+      • Produtos parados: ${totalProdutos}
+      • Estoque parado: {{ total_estoque_parado }} unidades
+      • Valor investido: ${totalValor}
+
+      🎯 ESTRATÉGIAS RECOMENDADAS:
+
+      1. PROMOÇÕES IMEDIATAS (D+45):
+         • Desconto de 15% em produtos parados há mais de 45 dias
+         • Compre 2, leve 3 em produtos críticos (D+60)
+
+      2. COMBOS E PACOTES:
+         • Criar kits com produtos parados + populares
+         • "Kit Família Havaianas" com desconto especial
+
+      3. EXPOSIÇÃO:
+         • Colocar em destaque na vitrine
+         • Sinalização especial nas prateleiras
+
+      4. PREÇO:
+         • Reavaliar preço de 10 produtos com mais estoque
+         • Testar redução de 10% por 15 dias
+
+      📅 PRÓXIMOS PASSOS:
+      1. Identificar 5 produtos para promoção esta semana
+      2. Criar sinalização para produtos parados
+      3. Reunir com equipe de vendas para estratégias
+      4. Monitorar resultados por 30 dias
+
+      ====================================
+      Sistema Havaianas - Controle de Estoque
+      ====================================
+      `;
+
+    alert("Plano de Ação Gerado!\n\n" + plano);
+  }
+
+  function sugerirPromocao(sku, estoque, dias) {
+    let desconto = 10;
+    let sugestao = "";
+
+    if (dias > 60) {
+      desconto = 25;
+      sugestao = "PROMOÇÃO RELÂMPAGO - 25% OFF";
+    } else if (dias > 45) {
+      desconto = 20;
+      sugestao = "OFERTA ESPECIAL - 20% OFF";
+    } else {
+      desconto = 15;
+      sugestao = "DESCONTO - 15% OFF";
+    }
+
+    const mensagem = `
+      🏷️ SUGESTÃO DE PROMOÇÃO
+
+      Produto: ${sku}
+      Estoque atual: ${estoque} unidades
+      Dias sem venda: ${dias} dias
+
+      🎯 SUGESTÃO:
+      ${sugestao}
+
+      • Desconto: ${desconto}%
+      • Período: 15 dias
+      • Justificativa: Produto parado há ${dias} dias
+
+      📊 EXPECTATIVA:
+      • Venda esperada: ${Math.ceil(estoque * 0.3)} unidades
+      • Giro de estoque: 30% em 15 dias
+
+      Deseja aplicar esta promoção?
+      `;
+
+    if (confirm(mensagem)) {
+      alert(
+        "Promoção sugerida! Considere implementar nas próximas ações de marketing.",
+      );
+    }
+  }
+</script>
+
+<style>
+  /* ===== ESTILO PARA IMAGENS - IGUAL AO PDV ===== */
+  .produto-thumbnail {
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+
+  .produto-thumbnail:hover {
+    transform: scale(2);
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Container da imagem */
+  .imagem-container {
+    display: inline-block;
+    overflow: visible;
+  }
+
+  /* Container da imagem - sem overflow hidden */
+  .imagem-container {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    overflow: visible;
+    position: relative;
+  }
+
+  /* Aumentar padding da primeira coluna */
+  #tabela-produtos-parados td:first-child {
+    padding-left: 25px !important;
+    position: relative;
+    overflow: visible;
+  }
+
+  /* Garantir que a célula não corte a imagem */
+  #tabela-produtos-parados td:first-child {
+    overflow: visible !important;
+  }
+
+  /* Ajuste na largura da primeira coluna */
+  #tabela-produtos-parados th:first-child {
+    width: 35%;
+    padding-left: 25px !important;
+  }
+
+  .table-danger {
+    background: linear-gradient(
+      90deg,
+      rgba(220, 53, 69, 0.05) 0%,
+      rgba(220, 53, 69, 0.02) 100%
+    );
+  }
+
+  .table-warning {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 193, 7, 0.05) 0%,
+      rgba(255, 193, 7, 0.02) 100%
+    );
+  }
+
+  .badge.fs-6 {
+    font-size: 1rem !important;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .card-header.bg-light.border-primary {
+    border-left: 4px solid #0d6efd !important;
+  }
+
+  #corpoTabela tr {
+    transition: opacity 0.3s ease;
+  }
+
+  #corpoTabela tr:not([style*="display: none"]):hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+  }
+
+  /* ESTILOS PARA BOTÕES */
+  .d-flex.gap-1 {
+    gap: 0.25rem !important;
+  }
+
+  .btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+  }
+  .btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+  }
+
+  .btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+  }
+  .btn-outline-warning:hover {
+    color: #000;
+    background-color: #ffc107;
+    border-color: #ffc107;
+  }
+
+  .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+  }
+  .btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+  }
+
+  /* Tamanho dos botões */
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+  }
+
+  @media (max-width: 768px) {
+    .col-md-3 {
+      margin-bottom: 10px;
+    }
+    #statusFiltro {
+      display: none;
+    }
+  }
+</style>
+{% endblock %}

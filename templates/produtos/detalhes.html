@@ -1,0 +1,232 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ produto.sku }} - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-box-seam me-2"></i>{{ produto.descricao }}
+<small class="text-muted ms-2">SKU: {{ produto.sku }}</small>
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('produtos') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i> Voltar
+    </a>
+    <a href="{{ url_for('matriz_estoque', produto_id=produto.id) }}" 
+       class="btn btn-outline-info">
+        <i class="bi bi-grid-3x3-gap me-2"></i> Matriz Estoque
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Informações do Produto -->
+    <div class="col-lg-4">
+        <!-- NOVO CARD: Imagem do Produto -->
+<div class="card mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Imagem do Produto</h5>
+    </div>
+    <div class="card-body text-center">
+        <img src="{{ url_for('uploaded_file', filename=produto.imagem) if produto.imagem else url_for('static', filename='img/no-image.png') }}" 
+             class="img-fluid rounded" 
+             style="max-height: 200px; width: auto;"
+             alt="{{ produto.descricao }}">
+        {% if produto.imagem %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <i class="bi bi-check-circle-fill text-success me-1"></i>Imagem cadastrada
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Informações Gerais</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="40%">SKU:</th>
+                            <td class="font-monospace">{{ produto.sku }}</td>
+                        </tr>
+                        <tr>
+                            <th>Descrição:</th>
+                            <td>{{ produto.descricao }}</td>
+                        </tr>
+                        <tr>
+                            <th>Modelo:</th>
+                            <td>{{ produto.modelo }}</td>
+                        </tr>
+                        <tr>
+                            <th>Coleção:</th>
+                            <td>{{ produto.colecao or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Gênero:</th>
+                            <td>{{ produto.genero }}</td>
+                        </tr>
+                        <tr>
+                            <th>Tipo:</th>
+                            <td>{{ produto.tipo }}</td>
+                        </tr>
+                        <tr>
+                            <th>Preço Venda:</th>
+                            <td class="text-success fw-bold">
+                                R$ {{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Custo:</th>
+                            <td>
+                                R$ {{ "{:,.2f}".format(produto.custo).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Margem:</th>
+                            <td>
+                                {% if produto.custo > 0 %}
+                                    {% set margem = ((produto.preco_venda - produto.custo) / produto.custo * 100) %}
+                                    <span class="badge bg-{{ 'success' if margem > 50 else 'warning' }}">
+                                        {{ "%.1f"|format(margem) }}%
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info">
+                                        N/A
+                                    </span>
+                                    <small class="text-muted ms-1">(custo zero)</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if produto.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Cadastrado em:</th>
+                            <td>{{ produto.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Grades do Produto -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Grades Disponíveis</h5>
+                <span class="badge bg-primary">
+                    {{ produto.grades|length }} variações
+                </span>
+            </div>
+            <div class="card-body">
+                {% if produto.grades %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Cor</th>
+                                <th>Tamanho</th>
+                                <th>SKU Grade</th>
+                                <th>Localização</th>
+                                <th class="text-center">Estoque Atual</th>
+                                <th class="text-center">Estoque Mín</th>
+                                <th class="text-center">Estoque Máx</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grade in produto.grades %}
+                            <tr class="{{ 'table-warning' if grade.estoque_atual < grade.estoque_minimo else '' }}">
+                                <td>{{ grade.cor }}</td>
+                                <td class="fw-bold">{{ grade.tamanho }}</td>
+                                <td class="font-monospace small">{{ grade.sku_grade }}</td>
+                                <td>{{ grade.localizacao }}</td>
+                                <td class="text-center fw-bold">
+                                    {{ grade.estoque_atual }}
+                                </td>
+                                <td class="text-center text-muted">
+                                    {{ grade.estoque_minimo }}
+                                </td>
+                                <td class="text-center text-muted">
+                                    {{ grade.estoque_maximo }}
+                                </td>
+                                <td class="text-center">
+                                    {% if grade.estoque_atual == 0 %}
+                                    <span class="badge bg-danger">Esgotado</span>
+                                    {% elif grade.estoque_atual < grade.estoque_minimo %}
+                                    <span class="badge bg-warning">Baixo</span>
+                                    {% elif grade.estoque_atual > grade.estoque_maximo %}
+                                    <span class="badge bg-info">Acumulado</span>
+                                    {% else %}
+                                    <span class="badge bg-success">OK</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Resumo de Estoque -->
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Total em Estoque</h6>
+                                {% set total_estoque = produto.grades|sum(attribute='estoque_atual') %}
+                                <h3 class="text-primary">{{ total_estoque }}</h3>
+                                <small class="text-muted">unidades</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Valor Estoque</h6>
+                                {% set valor_estoque = total_estoque * produto.custo %}
+                                <h3 class="text-success">
+                                    R$ {{ "{:,.2f}".format(valor_estoque).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                </h3>
+                                <small class="text-muted">custo total</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Valor Venda</h6>
+                                {% set valor_venda = total_estoque * produto.preco_venda %}
+                                <h3 class="text-info">
+                                    R$ {{ "{:,.2f}".format(valor_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                </h3>
+                                <small class="text-muted">potencial</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inboxes display-1 text-muted mb-3"></i>
+                    <h4>Nenhuma grade cadastrada</h4>
+                    <p class="text-muted">Este produto não possui variações de cor/tamanho.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

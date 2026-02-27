@@ -1,0 +1,363 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Ajuste de Estoque #{{ inventario.id }}{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-arrow-left-right me-2"></i>Ajuste de Estoque #{{ inventario.id }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Cards de informação -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h6 class="card-title">Status</h6>
+                <h4>Em Andamento</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Data Início</h6>
+                <h5>{{ inventario.data_inicio.strftime('%d/%m/%Y %H:%M') }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Tipo</h6>
+                <h5>Ajuste</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Itens Ajustados</h6>
+                {% set ajustados = inventario.contagens|selectattr('status', 'equalto', 'AJUSTADO')|list|length %}
+                <h5>{{ ajustados }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CARD DE BUSCA PARA AJUSTE -->
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0"><i class="bi bi-search me-2"></i>Buscar Produto para Ajustar</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Digite SKU, código ou nome do produto:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-lg" id="buscaProduto" 
+                           placeholder="Ex: HAV001 ou Havaianas Slim...">
+                    <button class="btn btn-warning btn-lg" type="button" onclick="buscarProdutos()">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+                <small class="text-muted">Digite pelo menos 2 caracteres</small>
+                
+                <!-- Resultados da busca -->
+                <div id="resultadosBusca" class="list-group mt-3" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Como funciona:</strong>
+                    <ul class="mt-2 small">
+                        <li>Busque o produto desejado</li>
+                        <li>Selecione a cor/tamanho</li>
+                        <li>Digite a quantidade REAL</li>
+                        <li>Clique em Aplicar</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para digitar quantidade -->
+<div class="modal fade" id="modalAjuste" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Ajustar Quantidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <span class="badge bg-secondary" id="modalSku"></span>
+                    <h5 id="modalProduto" class="mt-2"></h5>
+                    <p id="modalCorTamanho" class="text-muted"></p>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>Estoque atual no sistema:</strong> <span id="modalEstoqueAtual"></span> unidades
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nova quantidade (estoque REAL):</label>
+                    <input type="number" class="form-control form-control-lg" id="novaQuantidade" min="0" value="0">
+                </div>
+                
+                <div class="alert alert-warning" id="diferencaAlert" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Diferença: <strong id="diferencaValor"></strong> unidades
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="aplicarAjuste()">
+                    <i class="bi bi-check-circle me-1"></i> Aplicar Ajuste
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de itens ajustados -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Itens Ajustados</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>SKU</th>
+                        <th>Produto</th>
+                        <th>Cor/Tamanho</th>
+                        <th>Sistema</th>
+                        <th>Ajustado</th>
+                        <th>Diferença</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventario.contagens %}
+                    <tr>
+                        <td><span class="badge bg-secondary">{{ item.grade.sku_grade }}</span></td>
+                        <td>{{ item.grade.produto.descricao }}</td>
+                        <td>{{ item.grade.cor }} - T{{ item.grade.tamanho }}</td>
+                        <td>{{ item.quantidade_sistema }}</td>
+                        <td>
+                            {% if item.quantidade_contada %}
+                                <span class="badge bg-info">{{ item.quantidade_contada }}</span>
+                            {% else %}
+                                ---
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.quantidade_ajuste %}
+                                <span class="badge {% if item.quantidade_ajuste > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ item.quantidade_ajuste }}
+                                </span>
+                            {% else %}
+                                ---
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="bi bi-arrow-left-right display-4 text-muted"></i>
+                            <p class="text-muted mt-2">Nenhum item ajustado ainda</p>
+                            <p class="small text-muted">Use a busca acima para encontrar produtos</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Botões finais -->
+<div class="fixed-bottom bg-white border-top p-3">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-info-circle text-primary me-1"></i>
+                {% set ajustados_count = inventario.contagens|selectattr('status', 'equalto', 'AJUSTADO')|list|length %}
+                {{ ajustados_count }} itens ajustados
+            </span>
+            <div>
+                <form method="POST" action="{{ url_for('finalizar_inventario', id=inventario.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Finalizar ajustes?')">
+                        <i class="bi bi-check-circle me-1"></i> Finalizar Ajustes
+                    </button>
+                </form>
+                <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-outline-secondary ms-2">
+                    Cancelar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let gradeSelecionada = null;
+let timeoutId;
+
+function buscarProdutos() {
+    const termo = document.getElementById('buscaProduto').value.trim();
+    
+    if (termo.length < 2) {
+        alert('Digite pelo menos 2 caracteres');
+        return;
+    }
+    
+    document.getElementById('resultadosBusca').innerHTML = `
+        <div class="list-group-item text-center">
+            <div class="spinner-border spinner-border-sm text-warning"></div> Buscando...
+        </div>
+    `;
+    
+    fetch(`/api/buscar-produtos/${encodeURIComponent(termo)}`)
+        .then(response => response.json())
+        .then(produtos => {
+            if (produtos.length === 0) {
+                document.getElementById('resultadosBusca').innerHTML = `
+                    <div class="list-group-item text-center text-muted">
+                        Nenhum produto encontrado
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            produtos.forEach(p => {
+                html += `
+                    <div class="list-group-item" onclick="buscarGrades('${p.codigo}')">
+                        <strong>${p.codigo}</strong> - ${p.descricao}
+                    </div>
+                `;
+            });
+            document.getElementById('resultadosBusca').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            document.getElementById('resultadosBusca').innerHTML = `
+                <div class="list-group-item text-center text-danger">
+                    Erro ao buscar produtos
+                </div>
+            `;
+        });
+}
+
+function buscarGrades(codigo) {
+    fetch(`/api/produto/${codigo}/grades`)
+        .then(response => response.json())
+        .then(grades => {
+            if (grades.length === 0) {
+                alert('Produto sem grades');
+                return;
+            }
+            
+            let html = '<div class="list-group-item bg-light"><strong>Selecione a grade:</strong></div>';
+            grades.forEach(g => {
+                html += `
+                    <div class="list-group-item" onclick="abrirModal(${JSON.stringify(g).replace(/"/g, '&quot;')})">
+                        ${g.cor} - Tamanho ${g.tamanho}
+                        <span class="badge bg-info float-end">Estoque: ${g.estoque_atual}</span>
+                    </div>
+                `;
+            });
+            document.getElementById('resultadosBusca').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao buscar grades');
+        });
+}
+
+function abrirModal(grade) {
+    gradeSelecionada = grade;
+    
+    document.getElementById('modalSku').textContent = grade.sku_grade || grade.sku;
+    document.getElementById('modalProduto').textContent = grade.produto || grade.produto_descricao;
+    document.getElementById('modalCorTamanho').textContent = `${grade.cor} - Tamanho ${grade.tamanho}`;
+    document.getElementById('modalEstoqueAtual').textContent = grade.estoque_atual;
+    document.getElementById('novaQuantidade').value = grade.estoque_atual;
+    document.getElementById('diferencaAlert').style.display = 'none';
+    
+    new bootstrap.Modal(document.getElementById('modalAjuste')).show();
+}
+
+document.getElementById('novaQuantidade').addEventListener('input', function() {
+    const sistema = parseInt(document.getElementById('modalEstoqueAtual').textContent);
+    const nova = parseInt(this.value) || 0;
+    const diferenca = nova - sistema;
+    
+    if (diferenca !== 0) {
+        document.getElementById('diferencaAlert').style.display = 'block';
+        document.getElementById('diferencaValor').textContent = (diferenca > 0 ? '+' : '') + diferenca;
+    } else {
+        document.getElementById('diferencaAlert').style.display = 'none';
+    }
+});
+
+function aplicarAjuste() {
+    if (!gradeSelecionada) return;
+    
+    const novaQuantidade = document.getElementById('novaQuantidade').value;
+    const inventarioId = {{ inventario.id }};
+    
+    fetch(`/inventario/${inventarioId}/adicionar-ajuste`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            grade_id: gradeSelecionada.id,
+            quantidade: parseInt(novaQuantidade)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalAjuste')).hide();
+            window.location.reload();
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao aplicar ajuste');
+    });
+}
+
+// Busca ao digitar com delay
+document.getElementById('buscaProduto').addEventListener('input', function() {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(buscarProdutos, 500);
+});
+
+// Enter para buscar
+document.getElementById('buscaProduto').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        buscarProdutos();
+    }
+});
+</script>
+
+<style>
+body { margin-bottom: 80px; }
+.list-group-item { cursor: pointer; }
+.list-group-item:hover { background-color: #fff3cd; }
+</style>
+{% endblock %}

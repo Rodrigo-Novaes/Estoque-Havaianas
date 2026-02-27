@@ -1,0 +1,1440 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Configurações do Sistema - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-gear me-2"></i>Configurações do Sistema
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button class="btn btn-outline-secondary btn-sm" onclick="history.back()">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <!-- Menu Lateral -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-sliders2 me-2"></i>Menu</h6>
+                </div>
+                <div class="list-group list-group-flush" id="menuConfiguracoes" role="tablist">
+                    <a class="list-group-item list-group-item-action active" id="empresa-tab" data-bs-toggle="list" href="#empresa" role="tab">
+                        <i class="bi bi-building me-2"></i> Dados da Empresa
+                    </a>
+                    <a class="list-group-item list-group-item-action" id="logotipos-tab" data-bs-toggle="list" href="#logotipos" role="tab">
+                        <i class="bi bi-image me-2"></i> Logotipos
+                    </a>
+                    <a class="list-group-item list-group-item-action" id="comprovante-tab" data-bs-toggle="list" href="#comprovante" role="tab">
+                        <i class="bi bi-receipt me-2"></i> Comprovante
+                    </a>
+                    <a class="list-group-item list-group-item-action" id="cores-tab" data-bs-toggle="list" href="#cores" role="tab">
+                        <i class="bi bi-palette me-2"></i> Cores do Sistema
+                    </a>
+                    <a class="list-group-item list-group-item-action" id="backup-permissoes-tab" data-bs-toggle="list" href="#backup-permissoes" role="tab">
+                        <i class="bi bi-shield-lock me-2"></i> Permissões de Backup
+                    </a>
+                    <a class="list-group-item list-group-item-action" id="impressao-tab" data-bs-toggle="list" href="#impressao" role="tab">
+                        <i class="bi bi-printer me-2"></i> Impressão
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="tab-content" id="configuracoesContent">
+                <!-- Aba Dados da Empresa -->
+                <div class="tab-pane fade show active" id="empresa" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-building me-2"></i>Dados da Empresa</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="formEmpresa" method="POST" action="{{ url_for('api_salvar_empresa') }}">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Razão Social</label>
+                                        <input type="text" class="form-control" name="razao_social" value="{{ empresa.razao_social or '' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nome Fantasia</label>
+                                        <input type="text" class="form-control" name="nome_fantasia" value="{{ empresa.nome_fantasia or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">CNPJ</label>
+                                        <input type="text" class="form-control cnpj" name="cnpj" value="{{ empresa.cnpj or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Inscrição Estadual</label>
+                                        <input type="text" class="form-control" name="ie" value="{{ empresa.ie or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Inscrição Municipal</label>
+                                        <input type="text" class="form-control" name="im" value="{{ empresa.im or '' }}">
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <hr>
+                                        <h6 class="text-primary">Endereço</h6>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Endereço</label>
+                                        <input type="text" class="form-control" name="endereco" value="{{ empresa.endereco or '' }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Número</label>
+                                        <input type="text" class="form-control" name="numero" value="{{ empresa.numero or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Complemento</label>
+                                        <input type="text" class="form-control" name="complemento" value="{{ empresa.complemento or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Bairro</label>
+                                        <input type="text" class="form-control" name="bairro" value="{{ empresa.bairro or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Cidade</label>
+                                        <input type="text" class="form-control" name="cidade" value="{{ empresa.cidade or '' }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">UF</label>
+                                        <select class="form-select" name="uf">
+                                            <option value="">Selecione</option>
+                                            {% for uf in ufs %}
+                                            <option value="{{ uf }}" {% if empresa.uf == uf %}selected{% endif %}>{{ uf }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">CEP</label>
+                                        <input type="text" class="form-control cep" name="cep" value="{{ empresa.cep or '' }}">
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <hr>
+                                        <h6 class="text-primary">Contato</h6>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">Telefone</label>
+                                        <input type="text" class="form-control telefone" name="telefone" value="{{ empresa.telefone or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Celular</label>
+                                        <input type="text" class="form-control celular" name="celular" value="{{ empresa.celular or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">E-mail</label>
+                                        <input type="email" class="form-control" name="email" value="{{ empresa.email or '' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Website</label>
+                                        <input type="url" class="form-control" name="website" value="{{ empresa.website or '' }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-2"></i>Salvar Dados da Empresa
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aba Logotipos -->
+                <div class="tab-pane fade" id="logotipos" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-image me-2"></i>Logotipos</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="formLogos" method="POST" enctype="multipart/form-data" action="{{ url_for('api_upload_logo') }}">
+                                <div class="row">
+                                    <div class="col-md-6 text-center mb-4">
+                                        <label class="form-label fw-bold">Logo Principal (Navbar)</label>
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            {% if empresa.logo %}
+                                            <img src="{{ url_for('uploaded_logo', filename=empresa.logo) }}" 
+                                                 id="previewLogo" class="img-fluid" style="max-height: 80px;">
+                                            {% else %}
+                                            <div id="previewLogo" class="py-4">
+                                                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" class="form-control" name="logo" accept="image/*" onchange="previewImage(this, 'previewLogo')">
+                                        <small class="text-muted">Recomendado: 200x50px, PNG ou JPG</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6 text-center mb-4">
+                                        <label class="form-label fw-bold">Logo da Página de Login</label>
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            {% if empresa.logo_login %}
+                                            <img src="{{ url_for('uploaded_logo', filename=empresa.logo_login) }}" 
+                                                 id="previewLoginLogo" class="img-fluid" style="max-height: 80px;">
+                                            {% else %}
+                                            <div id="previewLoginLogo" class="py-4">
+                                                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <input type="file" class="form-control" name="logo_login" accept="image/*" onchange="previewImage(this, 'previewLoginLogo')">
+                                        <small class="text-muted">Recomendado: 300x100px, PNG ou JPG</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-upload me-2"></i>Upload das Logos
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aba Comprovante -->
+                <div class="tab-pane fade" id="comprovante" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Configurações do Comprovante</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="formComprovante" method="POST" action="{{ url_for('api_salvar_comprovante') }}">
+                                <div class="mb-3">
+                                    <label class="form-label">Cabeçalho do Comprovante</label>
+                                    <textarea class="form-control" name="cabecalho" rows="2">{{ config.cabecalho or '' }}</textarea>
+                                    <small class="text-muted">Texto que aparecerá no topo do comprovante</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Rodapé do Comprovante</label>
+                                    <textarea class="form-control" name="rodape" rows="2">{{ config.rodape or 'Obrigado pela preferência!' }}</textarea>
+                                    <small class="text-muted">Ex: "Obrigado pela preferência! Volte sempre!"</small>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Tamanho do Papel</label>
+                                        <select class="form-select" name="tamanho_papel">
+                                            <option value="58mm" {% if config.tamanho_papel == '58mm' %}selected{% endif %}>58mm (Não fiscal)</option>
+                                            <option value="80mm" {% if config.tamanho_papel == '80mm' %}selected{% endif %}>80mm (Padrão)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Tamanho da Fonte</label>
+                                        <select class="form-select" name="fonte_tamanho">
+                                            <option value="10" {% if config.fonte_tamanho == 10 %}selected{% endif %}>Pequena</option>
+                                            <option value="12" {% if config.fonte_tamanho == 12 %}selected{% endif %}>Normal</option>
+                                            <option value="14" {% if config.fonte_tamanho == 14 %}selected{% endif %}>Grande</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="mostrar_cnpj" id="mostrar_cnpj" {% if config.mostrar_cnpj %}checked{% endif %}>
+                                            <label class="form-check-label" for="mostrar_cnpj">Mostrar CNPJ no comprovante</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="mostrar_endereco" id="mostrar_endereco" {% if config.mostrar_endereco %}checked{% endif %}>
+                                            <label class="form-check-label" for="mostrar_endereco">Mostrar endereço da loja</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="mostrar_telefone" id="mostrar_telefone" {% if config.mostrar_telefone %}checked{% endif %}>
+                                            <label class="form-check-label" for="mostrar_telefone">Mostrar telefone para contato</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="mostrar_logo" id="mostrar_logo" {% if config.mostrar_logo %}checked{% endif %}>
+                                            <label class="form-check-label" for="mostrar_logo">Mostrar logo no comprovante</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-2"></i>Salvar Configurações
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aba Cores -->
+                <div class="tab-pane fade" id="cores" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-palette me-2"></i>Cores do Sistema</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="formCores" method="POST" action="{{ url_for('api_salvar_empresa') }}">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label fw-bold">Cor Principal</label>
+                                        <div class="mb-2">
+                                            <div class="p-3 rounded" style="background-color: {{ empresa.cor_primaria or '#0d6efd' }}; height: 50px;"></div>
+                                        </div>
+                                        <input type="color" class="form-control form-control-color" name="cor_primaria" value="{{ empresa.cor_primaria or '#0d6efd' }}">
+                                        <small class="text-muted">Botões, links, etc</small>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label fw-bold">Cor Secundária</label>
+                                        <div class="mb-2">
+                                            <div class="p-3 rounded" style="background-color: {{ empresa.cor_secundaria or '#6c757d' }}; height: 50px;"></div>
+                                        </div>
+                                        <input type="color" class="form-control form-control-color" name="cor_secundaria" value="{{ empresa.cor_secundaria or '#6c757d' }}">
+                                        <small class="text-muted">Elementos secundários</small>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label fw-bold">Cor de Sucesso</label>
+                                        <div class="mb-2">
+                                            <div class="p-3 rounded" style="background-color: {{ empresa.cor_sucesso or '#198754' }}; height: 50px;"></div>
+                                        </div>
+                                        <input type="color" class="form-control form-control-color" name="cor_sucesso" value="{{ empresa.cor_sucesso or '#198754' }}">
+                                        <small class="text-muted">Confirmações, sucesso</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-palette me-2"></i>Salvar Cores
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ABA: Permissões de Backup -->
+                <div class="tab-pane fade" id="backup-permissoes" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Permissões de Backup</h6>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#infoPermissoes">
+                                    <i class="bi bi-info-circle"></i> Informações
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações colapsáveis -->
+                        <div class="collapse" id="infoPermissoes">
+                            <div class="card-body bg-light border-bottom">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-question-circle me-2"></i>O que cada permissão faz?</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><span class="badge bg-secondary me-2">Visualizar</span> Ver a página de backups</li>
+                                            <li class="mb-2"><span class="badge bg-success me-2">Criar</span> Criar novos backups</li>
+                                            <li class="mb-2"><span class="badge bg-info me-2">Baixar</span> Baixar backups para o PC</li>
+                                            <li class="mb-2"><span class="badge bg-warning text-dark me-2">Restaurar</span> Substituir o banco atual</li>
+                                            <li class="mb-2"><span class="badge bg-danger me-2">Excluir</span> Remover arquivos de backup</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="bi bi-shield-check me-2"></i>Informações importantes</h6>
+                                        <p class="text-muted small">
+                                            <i class="bi bi-shield-fill-check me-1"></i>
+                                            Administradores sempre têm todas as permissões (não podem ser alterados).
+                                        </p>
+                                        <p class="text-muted small">
+                                            <i class="bi bi-search me-1"></i>
+                                            Use os filtros ao lado dos títulos para encontrar usuários rapidamente.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- ADMINISTRADORES -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-danger mb-0">
+                                        <i class="bi bi-shield-fill-check me-2"></i>Administradores
+                                        <span class="badge bg-danger ms-2">{{ usuarios|selectattr('admin', 'equalto', true)|list|length }}</span>
+                                    </h6>
+                                    
+                                    <div class="d-flex align-items-center" style="width: 250px;">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                            <input type="text" class="form-control" id="filtroAdmin" placeholder="Filtrar administradores...">
+                                            <button class="btn btn-outline-secondary" type="button" id="limparFiltroAdmin" onclick="limparFiltro('admin')" style="display: none;">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover" id="tabelaAdmin" style="width:100%">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Usuário</th>
+                                                <th>Nome</th>
+                                                <th class="text-center">Visualizar</th>
+                                                <th class="text-center">Criar</th>
+                                                <th class="text-center">Baixar</th>
+                                                <th class="text-center">Restaurar</th>
+                                                <th class="text-center">Excluir</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for usuario in usuarios %}
+                                                {% if usuario.admin %}
+                                                <tr>
+                                                    <td><strong>{{ usuario.username }}</strong></td>
+                                                    <td>{{ usuario.nome or '-' }}</td>
+                                                    <td class="text-center align-middle">
+                                                        <i class="bi bi-check-circle-fill text-success fs-5" title="Admin sempre tem acesso"></i>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                                    </td>
+                                                </tr>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- OPERADORES -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-primary mb-0">
+                                        <i class="bi bi-person-workspace me-2"></i>Operadores
+                                        <span class="badge bg-primary ms-2">{{ usuarios|rejectattr('admin', 'equalto', true)|list|length }}</span>
+                                    </h6>
+                                    
+                                    <div class="d-flex align-items-center" style="width: 250px;">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                            <input type="text" class="form-control" id="filtroOperador" placeholder="Filtrar operadores...">
+                                            <button class="btn btn-outline-secondary" type="button" id="limparFiltroOperador" onclick="limparFiltro('operador')" style="display: none;">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover" id="tabelaOperador" style="width:100%">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Usuário</th>
+                                                <th>Nome</th>
+                                                <th class="text-center">Visualizar</th>
+                                                <th class="text-center">Criar</th>
+                                                <th class="text-center">Baixar</th>
+                                                <th class="text-center">Restaurar</th>
+                                                <th class="text-center">Excluir</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for usuario in usuarios %}
+                                                {% if not usuario.admin %}
+                                                <tr>
+                                                    <td><strong>{{ usuario.username }}</strong></td>
+                                                    <td>{{ usuario.nome or '-' }}</td>
+                                                    
+                                                    <!-- Visualizar -->
+                                                    <td class="text-center align-middle">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="visualizar_{{ usuario.id }}"
+                                                                   {% if usuario.backup_visualizar %}checked{% endif %}
+                                                                   onchange="toggleVisualizar({{ usuario.id }}, this.checked)">
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <!-- Criar -->
+                                                    <td class="text-center align-middle">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="criar_{{ usuario.id }}"
+                                                                   {% if usuario.backup_criar %}checked{% endif %}
+                                                                   {% if not usuario.backup_visualizar %}disabled{% endif %}
+                                                                   onchange="alterarPermissao({{ usuario.id }}, 'backup_criar', this.checked)">
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <!-- Baixar -->
+                                                    <td class="text-center align-middle">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="baixar_{{ usuario.id }}"
+                                                                   {% if usuario.backup_baixar %}checked{% endif %}
+                                                                   {% if not usuario.backup_visualizar %}disabled{% endif %}
+                                                                   onchange="alterarPermissao({{ usuario.id }}, 'backup_baixar', this.checked)">
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <!-- Restaurar -->
+                                                    <td class="text-center align-middle">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="restaurar_{{ usuario.id }}"
+                                                                   {% if usuario.backup_restaurar %}checked{% endif %}
+                                                                   {% if not usuario.backup_visualizar %}disabled{% endif %}
+                                                                   onchange="alterarPermissao({{ usuario.id }}, 'backup_restaurar', this.checked)">
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <!-- Excluir -->
+                                                    <td class="text-center align-middle">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                   id="excluir_{{ usuario.id }}"
+                                                                   {% if usuario.backup_excluir %}checked{% endif %}
+                                                                   {% if not usuario.backup_visualizar %}disabled{% endif %}
+                                                                   onchange="alterarPermissao({{ usuario.id }}, 'backup_excluir', this.checked)">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ABA SIMPLIFICADA: Configurações de Impressão -->
+                <div class="tab-pane fade" id="impressao" role="tabpanel">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Configurações de Impressão</h6>
+                        </div>
+                        <div class="card-body">
+                            
+                            <!-- SELETOR DE IMPRESSORA -->
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-printer-fill me-2"></i>Impressora Padrão
+                                    </label>
+                                    <select class="form-select" name="impressora_padrao" id="impressoraPadrao">
+                                        <option value="">Selecione uma impressora...</option>
+                                        {% if impressoras %}
+                                            {% for imp in impressoras %}
+                                                <option value="{{ imp.id }}" 
+                                                        {% if empresa.impressora_padrao_id == imp.id %}selected{% endif %}>
+                                                    {{ imp.nome }}
+                                                </option>
+                                            {% endfor %}
+                                        {% else %}
+                                            <option value="" disabled>Nenhuma impressora encontrada</option>
+                                        {% endif %}
+                                    </select>
+                                    <small class="text-muted">Escolha a impressora que será usada para imprimir comprovantes</small>
+                                </div>
+                            </div>
+
+                            <!-- TIPO DE IMPRESSÃO -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-gear me-2"></i>Tipo de Impressão
+                                    </label>
+                                    <select class="form-select" id="impressaoTipo">
+                                        <option value="dialogo">📄 Diálogo do Windows (perguntar antes)</option>
+                                        <option value="auto">🖨️ Automático (imprimir direto)</option>
+                                        <option value="visualizar">👁️ Apenas Visualizar (não imprime)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-files me-2"></i>Número de Vias
+                                    </label>
+                                    <select class="form-select" id="impressaoVias">
+                                        <option value="1">1 via</option>
+                                        <option value="2">2 vias</option>
+                                        <option value="3">3 vias</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- MENSAGEM DO RODAPÉ -->
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-chat-text me-2"></i>Mensagem no Rodapé
+                                    </label>
+                                    <input type="text" class="form-control" id="impressaoMensagem" value="Obrigado pela preferência!">
+                                </div>
+                            </div>
+
+                            <!-- OPÇÕES ADICIONAIS -->
+                            <div class="row mb-4">
+                                <div class="col-md-12">
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                            name="impressao_copiar" 
+                                            id="impressaoCopiar"
+                                            {% if config.copiar %}checked{% endif %}>
+                                        <label class="form-check-label" for="impressaoCopiar">
+                                            <strong>Gerar via do cliente</strong>
+                                            <br>
+                                            <small class="text-muted">Imprime uma cópia adicional para o cliente</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BOTÕES -->
+                            <div class="row">
+                                <div class="col-md-12 text-end">
+                                    <button type="button" class="btn btn-outline-secondary me-2" onclick="testarImpressao()">
+                                        <i class="bi bi-play-circle me-2"></i>Testar Impressão
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="salvarConfigImpressao()">
+                                        <i class="bi bi-save me-2"></i>Salvar Configurações
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Adicionar CSS do DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+
+<script>
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Busca automática de CEP usando VIACEP
+document.querySelectorAll('.cep').forEach(el => {
+    el.addEventListener('blur', function() {
+        buscarCep(this.value);
+    });
+    
+    el.addEventListener('input', function() {
+        let cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCep(cep);
+        }
+    });
+});
+
+function buscarCep(cep) {
+    cep = cep.replace(/\D/g, '');
+    
+    if (cep.length !== 8) {
+        return;
+    }
+    
+    const cepField = document.querySelector('.cep');
+    const originalBorder = cepField.style.border;
+    cepField.style.border = '2px solid #ffc107';
+    
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            cepField.style.border = originalBorder;
+            
+            if (data.erro) {
+                alert('CEP não encontrado!');
+                return;
+            }
+            
+            if (data.logradouro) {
+                document.querySelector('input[name="endereco"]').value = data.logradouro;
+            }
+            
+            if (data.bairro) {
+                document.querySelector('input[name="bairro"]').value = data.bairro;
+            }
+            
+            if (data.localidade) {
+                document.querySelector('input[name="cidade"]').value = data.localidade;
+            }
+            
+            if (data.uf) {
+                const ufSelect = document.querySelector('select[name="uf"]');
+                for (let option of ufSelect.options) {
+                    if (option.value === data.uf) {
+                        option.selected = true;
+                        break;
+                    }
+                }
+            }
+            
+            cepField.style.border = '2px solid #198754';
+            setTimeout(() => {
+                cepField.style.border = originalBorder;
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Erro ao buscar CEP:', error);
+            cepField.style.border = '2px solid #dc3545';
+            alert('Erro ao buscar CEP. Tente novamente.');
+            setTimeout(() => {
+                cepField.style.border = originalBorder;
+            }, 2000);
+        });
+}
+
+// Máscaras
+document.querySelectorAll('.cnpj').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/, '$1.$2')
+            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+            .replace(/\.(\d{3})(\d)/, '.$1/$2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    });
+});
+
+document.querySelectorAll('.cep').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{5})(\d)/, '$1-$2');
+    });
+});
+
+document.querySelectorAll('.telefone, .celular').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    });
+});
+
+// Função para mostrar mensagens flash
+function mostrarMensagemFlash(tipo, mensagem) {
+    const flashArea = document.getElementById('flash-area');
+    if (!flashArea) return;
+    
+    const msg = document.createElement('div');
+    msg.className = `flash-message flash-${tipo}`;
+    
+    let icone = 'bi-info-circle-fill';
+    if (tipo === 'success') icone = 'bi-check-circle-fill';
+    if (tipo === 'danger' || tipo === 'error') icone = 'bi-exclamation-triangle-fill';
+    if (tipo === 'warning') icone = 'bi-exclamation-circle-fill';
+    
+    msg.innerHTML = `
+        <div style="display: flex; align-items: center;">
+            <i class="bi ${icone} flash-icon"></i>
+            <span>${mensagem}</span>
+        </div>
+        <button type="button" class="flash-close-btn" onclick="this.parentElement.remove()">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    flashArea.appendChild(msg);
+    
+    setTimeout(() => {
+        if (msg.parentNode) {
+            msg.classList.add('closing');
+            setTimeout(() => msg.remove(), 300);
+        }
+    }, 3000);
+}
+
+// Funções para permissões de backup
+function alterarPermissao(usuarioId, permissao, valor) {
+    fetch('/api/usuarios/permissoes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            usuario_id: usuarioId,
+            permissao: permissao,
+            valor: valor
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+            if (checkbox) {
+                checkbox.style.outline = '2px solid #198754';
+                setTimeout(() => checkbox.style.outline = '', 1000);
+            }
+            
+            if (data.mensagem) {
+                mostrarMensagemFlash('success', data.mensagem);
+            }
+        } else {
+            mostrarMensagemFlash('danger', '❌ Erro: ' + data.error);
+            const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+            if (checkbox) {
+                checkbox.checked = !valor;
+            }
+        }
+    })
+    .catch(error => {
+        mostrarMensagemFlash('danger', '❌ Erro de conexão: ' + error);
+        const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+        if (checkbox) {
+            checkbox.checked = !valor;
+        }
+    });
+}
+
+function toggleVisualizar(usuarioId, valor) {
+    alterarPermissao(usuarioId, 'backup_visualizar', valor);
+    
+    const criarSwitch = document.getElementById(`criar_${usuarioId}`);
+    const baixarSwitch = document.getElementById(`baixar_${usuarioId}`);
+    const restaurarSwitch = document.getElementById(`restaurar_${usuarioId}`);
+    const excluirSwitch = document.getElementById(`excluir_${usuarioId}`);
+    
+    if (!valor) {
+        if (criarSwitch && criarSwitch.checked) {
+            criarSwitch.checked = false;
+        }
+        if (baixarSwitch && baixarSwitch.checked) {
+            baixarSwitch.checked = false;
+        }
+        if (restaurarSwitch && restaurarSwitch.checked) {
+            restaurarSwitch.checked = false;
+        }
+        if (excluirSwitch && excluirSwitch.checked) {
+            excluirSwitch.checked = false;
+        }
+        
+        if (criarSwitch) criarSwitch.disabled = true;
+        if (baixarSwitch) baixarSwitch.disabled = true;
+        if (restaurarSwitch) restaurarSwitch.disabled = true;
+        if (excluirSwitch) excluirSwitch.disabled = true;
+        
+    } else {
+        if (criarSwitch) criarSwitch.disabled = false;
+        if (baixarSwitch) baixarSwitch.disabled = false;
+        if (restaurarSwitch) restaurarSwitch.disabled = false;
+        if (excluirSwitch) excluirSwitch.disabled = false;
+    }
+}
+
+
+// ===== FUNÇÕES DE IMPRESSÃO =====
+function carregarConfigImpressao() {
+    console.log('🔄 Carregando configurações...');
+    
+    // Carregar configurações salvas no banco
+    fetch('/api/config/impressao/dados')
+        .then(response => response.json())
+        .then(data => {
+            console.log('📥 Configurações recebidas:', data);
+            
+            if (data.success) {
+                const config = data.config;
+                
+                // Carregar campos básicos
+                document.getElementById('impressaoTipo').value = config.tipo || 'dialogo';
+                document.getElementById('impressaoVias').value = config.vias || 1;
+                document.getElementById('impressaoMensagem').value = config.mensagem || 'Obrigado pela preferência!';
+                document.getElementById('impressaoCopiar').checked = config.copiar || false;
+                
+                // Carregar impressora padrão
+                if (config.impressora_id) {
+                    const selectImp = document.getElementById('impressoraPadrao');
+                    for (let i = 0; i < selectImp.options.length; i++) {
+                        if (selectImp.options[i].value == config.impressora_id) {
+                            selectImp.selectedIndex = i;
+                            console.log(`✅ Impressora carregada: ${selectImp.options[i].text}`);
+                            break;
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => console.error('❌ Erro ao carregar:', error));
+}
+
+function salvarConfigImpressao() {
+    console.log('💾 Salvando configurações de impressão...');
+    
+    const formData = new FormData();
+    
+    // Adicionar campos básicos
+    formData.append('impressao_tipo', document.getElementById('impressaoTipo').value);
+    formData.append('impressao_vias', document.getElementById('impressaoVias').value);
+    formData.append('impressao_mensagem', document.getElementById('impressaoMensagem').value);
+    
+    // Via do cliente
+    const viaCliente = document.getElementById('impressaoCopiar').checked;
+    if (viaCliente) {
+        formData.append('impressao_copiar', 'on');
+        console.log('📤 Via do cliente: ATIVADO');
+    }
+    
+    // Impressora padrão
+    const selectImp = document.getElementById('impressoraPadrao');
+    const impressoraId = selectImp.value;
+    const impressoraNome = selectImp.options[selectImp.selectedIndex]?.text || '';
+    
+    if (impressoraId) {
+        formData.append('impressora_padrao_id', impressoraId);
+        formData.append('impressora_padrao_nome', impressoraNome);
+        console.log(`📤 Impressora selecionada: ID=${impressoraId}, Nome=${impressoraNome}`);
+    }
+    
+    fetch('/api/config/impressao', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('📥 Resposta:', data);
+        if (data.success) {
+            mostrarMensagemFlash('success', '✅ Configurações de impressão salvas!');
+        } else {
+            mostrarMensagemFlash('danger', '❌ Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro:', error);
+        mostrarMensagemFlash('danger', '❌ Erro de conexão: ' + error);
+    });
+}
+
+function testarImpressao() {
+    const select = document.getElementById('impressoraPadrao');
+    const impressora = select.options[select.selectedIndex]?.text || 'Nenhuma impressora selecionada';
+    alert(`🔍 Teste enviado para: ${impressora}\n\nVerifique se o comprovante foi impresso.`);
+}
+
+// ===== CONFIGURAÇÕES DAS ABAS =====
+// Salvar aba ativa
+document.querySelectorAll('#menuConfiguracoes .list-group-item').forEach(item => {
+    item.addEventListener('click', function() {
+        localStorage.setItem('abaConfigAtiva', this.getAttribute('href').substring(1));
+    });
+});
+
+// Carregar aba ativa e configurar eventos
+document.addEventListener('DOMContentLoaded', function() {
+    const abaAtiva = localStorage.getItem('abaConfigAtiva');
+    if (abaAtiva) {
+        const linkAtivo = document.querySelector(`#menuConfiguracoes .list-group-item[href="#${abaAtiva}"]`);
+        if (linkAtivo) linkAtivo.click();
+    }
+    
+    // ⚠️ IMPORTANTE: Só carrega impressoras quando clicar na aba IMPRESSÃO
+    document.getElementById('impressao-tab').addEventListener('shown.bs.tab', function() {
+        console.log('🖨️ Carregando impressoras...');
+        carregarConfigImpressao();
+    });
+});
+
+// ===== MÁSCARAS E FORMATAÇÕES =====
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Busca automática de CEP
+document.querySelectorAll('.cep').forEach(el => {
+    el.addEventListener('blur', function() {
+        buscarCep(this.value);
+    });
+    
+    el.addEventListener('input', function() {
+        let cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCep(cep);
+        }
+    });
+});
+
+function buscarCep(cep) {
+    cep = cep.replace(/\D/g, '');
+    
+    if (cep.length !== 8) {
+        return;
+    }
+    
+    const cepField = document.querySelector('.cep');
+    const originalBorder = cepField.style.border;
+    cepField.style.border = '2px solid #ffc107';
+    
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            cepField.style.border = originalBorder;
+            
+            if (data.erro) {
+                alert('CEP não encontrado!');
+                return;
+            }
+            
+            if (data.logradouro) {
+                document.querySelector('input[name="endereco"]').value = data.logradouro;
+            }
+            
+            if (data.bairro) {
+                document.querySelector('input[name="bairro"]').value = data.bairro;
+            }
+            
+            if (data.localidade) {
+                document.querySelector('input[name="cidade"]').value = data.localidade;
+            }
+            
+            if (data.uf) {
+                const ufSelect = document.querySelector('select[name="uf"]');
+                for (let option of ufSelect.options) {
+                    if (option.value === data.uf) {
+                        option.selected = true;
+                        break;
+                    }
+                }
+            }
+            
+            cepField.style.border = '2px solid #198754';
+            setTimeout(() => {
+                cepField.style.border = originalBorder;
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Erro ao buscar CEP:', error);
+            cepField.style.border = '2px solid #dc3545';
+            alert('Erro ao buscar CEP. Tente novamente.');
+            setTimeout(() => {
+                cepField.style.border = originalBorder;
+            }, 2000);
+        });
+}
+
+// Máscaras
+document.querySelectorAll('.cnpj').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/, '$1.$2')
+            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+            .replace(/\.(\d{3})(\d)/, '.$1/$2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    });
+});
+
+document.querySelectorAll('.cep').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{5})(\d)/, '$1-$2');
+    });
+});
+
+document.querySelectorAll('.telefone, .celular').forEach(el => {
+    el.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    });
+});
+
+// ===== FUNÇÕES DE PERMISSÕES DE BACKUP =====
+function mostrarMensagemFlash(tipo, mensagem) {
+    const flashArea = document.getElementById('flash-area');
+    if (!flashArea) return;
+    
+    const msg = document.createElement('div');
+    msg.className = `flash-message flash-${tipo}`;
+    
+    let icone = 'bi-info-circle-fill';
+    if (tipo === 'success') icone = 'bi-check-circle-fill';
+    if (tipo === 'danger' || tipo === 'error') icone = 'bi-exclamation-triangle-fill';
+    if (tipo === 'warning') icone = 'bi-exclamation-circle-fill';
+    
+    msg.innerHTML = `
+        <div style="display: flex; align-items: center;">
+            <i class="bi ${icone} flash-icon"></i>
+            <span>${mensagem}</span>
+        </div>
+        <button type="button" class="flash-close-btn" onclick="this.parentElement.remove()">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    flashArea.appendChild(msg);
+    
+    setTimeout(() => {
+        if (msg.parentNode) {
+            msg.classList.add('closing');
+            setTimeout(() => msg.remove(), 300);
+        }
+    }, 3000);
+}
+
+function alterarPermissao(usuarioId, permissao, valor) {
+    fetch('/api/usuarios/permissoes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            usuario_id: usuarioId,
+            permissao: permissao,
+            valor: valor
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+            if (checkbox) {
+                checkbox.style.outline = '2px solid #198754';
+                setTimeout(() => checkbox.style.outline = '', 1000);
+            }
+            
+            if (data.mensagem) {
+                mostrarMensagemFlash('success', data.mensagem);
+            }
+        } else {
+            mostrarMensagemFlash('danger', '❌ Erro: ' + data.error);
+            const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+            if (checkbox) {
+                checkbox.checked = !valor;
+            }
+        }
+    })
+    .catch(error => {
+        mostrarMensagemFlash('danger', '❌ Erro de conexão: ' + error);
+        const checkbox = document.getElementById(`${permissao}_${usuarioId}`);
+        if (checkbox) {
+            checkbox.checked = !valor;
+        }
+    });
+}
+
+function toggleVisualizar(usuarioId, valor) {
+    alterarPermissao(usuarioId, 'backup_visualizar', valor);
+    
+    const criarSwitch = document.getElementById(`criar_${usuarioId}`);
+    const baixarSwitch = document.getElementById(`baixar_${usuarioId}`);
+    const restaurarSwitch = document.getElementById(`restaurar_${usuarioId}`);
+    const excluirSwitch = document.getElementById(`excluir_${usuarioId}`);
+    
+    if (!valor) {
+        if (criarSwitch && criarSwitch.checked) {
+            criarSwitch.checked = false;
+        }
+        if (baixarSwitch && baixarSwitch.checked) {
+            baixarSwitch.checked = false;
+        }
+        if (restaurarSwitch && restaurarSwitch.checked) {
+            restaurarSwitch.checked = false;
+        }
+        if (excluirSwitch && excluirSwitch.checked) {
+            excluirSwitch.checked = false;
+        }
+        
+        if (criarSwitch) criarSwitch.disabled = true;
+        if (baixarSwitch) baixarSwitch.disabled = true;
+        if (restaurarSwitch) restaurarSwitch.disabled = true;
+        if (excluirSwitch) excluirSwitch.disabled = true;
+        
+    } else {
+        if (criarSwitch) criarSwitch.disabled = false;
+        if (baixarSwitch) baixarSwitch.disabled = false;
+        if (restaurarSwitch) restaurarSwitch.disabled = false;
+        if (excluirSwitch) excluirSwitch.disabled = false;
+    }
+}
+
+// ===== SUBMISSÃO DOS FORMULÁRIOS =====
+document.getElementById('formEmpresa').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch(this.action, { method: 'POST', body: new FormData(this) })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarMensagemFlash('success', data.mensagem || '✅ Dados da empresa salvos!');
+            } else {
+                mostrarMensagemFlash('danger', '❌ ' + (data.message || 'Erro ao salvar'));
+            }
+        })
+        .catch(error => mostrarMensagemFlash('danger', '❌ Erro: ' + error));
+});
+
+document.getElementById('formComprovante').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch(this.action, { method: 'POST', body: new FormData(this) })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarMensagemFlash('success', data.mensagem || '✅ Configurações do comprovante salvas!');
+            } else {
+                mostrarMensagemFlash('danger', '❌ ' + (data.message || 'Erro ao salvar'));
+            }
+        })
+        .catch(error => mostrarMensagemFlash('danger', '❌ Erro: ' + error));
+});
+
+document.getElementById('formCores').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch(this.action, { method: 'POST', body: new FormData(this) })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarMensagemFlash('success', data.mensagem || '✅ Cores do sistema salvas!');
+            } else {
+                mostrarMensagemFlash('danger', '❌ ' + (data.message || 'Erro ao salvar'));
+            }
+        })
+        .catch(error => mostrarMensagemFlash('danger', '❌ Erro: ' + error));
+});
+
+document.getElementById('formLogos').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch(this.action, { method: 'POST', body: new FormData(this) })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarMensagemFlash('success', data.mensagem || '✅ Logos atualizadas!');
+            } else {
+                mostrarMensagemFlash('danger', '❌ ' + (data.message || 'Erro ao enviar'));
+            }
+        })
+        .catch(error => mostrarMensagemFlash('danger', '❌ Erro: ' + error));
+});
+function salvarConfigImpressao() {
+    console.log('💾 Salvando configurações de impressão...');
+    
+    const formData = new FormData();
+    
+    // Adicionar campos básicos
+    formData.append('impressao_tipo', document.getElementById('impressaoTipo').value);
+    formData.append('impressao_vias', document.getElementById('impressaoVias').value);
+    formData.append('impressao_mensagem', document.getElementById('impressaoMensagem').value);
+    
+    // Via do cliente
+    const viaCliente = document.getElementById('impressaoCopiar').checked;
+    if (viaCliente) {
+        formData.append('impressao_copiar', 'on');
+        console.log('📤 Via do cliente: ATIVADO');
+    }
+    
+    // 🔥 CORRIGIDO: Impressora padrão
+    const selectImp = document.getElementById('impressoraPadrao');
+    const impressoraId = selectImp.value;
+    const impressoraNome = selectImp.options[selectImp.selectedIndex]?.text || '';
+    
+    if (impressoraId) {
+        formData.append('impressora_padrao_id', impressoraId);
+        formData.append('impressora_padrao_nome', impressoraNome);
+        console.log(`📤 Impressora selecionada: ID=${impressoraId}, Nome=${impressoraNome}`);
+    }
+    
+    fetch('/api/config/impressao', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('📥 Resposta:', data);
+        if (data.success) {
+            mostrarMensagemFlash('success', '✅ Configurações de impressão salvas!');
+            carregarConfigImpressao(); // Recarregar para confirmar
+        } else {
+            mostrarMensagemFlash('danger', '❌ Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro:', error);
+        mostrarMensagemFlash('danger', '❌ Erro de conexão: ' + error);
+    });
+}
+
+function testarImpressao() {
+    const select = document.getElementById('impressoraPadrao');
+    const impressora = select.options[select.selectedIndex]?.text || 'Nenhuma impressora selecionada';
+    alert(`🔍 Teste enviado para: ${impressora}\n\nVerifique se o comprovante foi impresso.`);
+}
+
+
+
+// Salvar aba ativa
+document.querySelectorAll('#menuConfiguracoes .list-group-item').forEach(item => {
+    item.addEventListener('click', function() {
+        localStorage.setItem('abaConfigAtiva', this.getAttribute('href').substring(1));
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const abaAtiva = localStorage.getItem('abaConfigAtiva');
+    if (abaAtiva) {
+        const linkAtivo = document.querySelector(`#menuConfiguracoes .list-group-item[href="#${abaAtiva}"]`);
+        if (linkAtivo) linkAtivo.click();
+    }
+    
+    // Carregar configurações de impressão
+    carregarConfigImpressao();
+    
+    // Recarregar quando a aba de impressão for aberta
+    document.getElementById('impressao-tab').addEventListener('shown.bs.tab', carregarConfigImpressao);
+});
+
+// DATATABLES - VERSÃO SIMPLIFICADA
+function inicializarDataTables() {
+    // Verificar se jQuery existe
+    if (typeof jQuery === 'undefined') {
+        console.log('jQuery não disponível');
+        return;
+    }
+    
+    console.log('Inicializando DataTables...');
+    
+    try {
+        // Configuração padrão
+        var config = {
+            language: { 
+                url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json" 
+            },
+            pageLength: 10,
+            lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Todos"]],
+            order: [[0, 'asc']],
+            columnDefs: [{ orderable: false, targets: [2,3,4,5,6] }]
+        };
+        
+        // Inicializar tabela Admin se existir
+        if ($('#tabelaAdmin').length && !$.fn.dataTable.isDataTable('#tabelaAdmin')) {
+            $('#tabelaAdmin').DataTable(config);
+            console.log('Tabela Admin inicializada');
+        }
+        
+        // Inicializar tabela Operador se existir
+        if ($('#tabelaOperador').length && !$.fn.dataTable.isDataTable('#tabelaOperador')) {
+            $('#tabelaOperador').DataTable(config);
+            console.log('Tabela Operador inicializada');
+        }
+        
+    } catch (e) {
+        console.error('Erro:', e);
+    }
+}
+
+// Inicializar quando a aba for aberta
+document.getElementById('backup-permissoes-tab').addEventListener('shown.bs.tab', function() {
+    setTimeout(inicializarDataTables, 300);
+});
+
+// Se a aba já estiver ativa
+if (document.getElementById('backup-permissoes').classList.contains('active')) {
+    setTimeout(inicializarDataTables, 500);
+}
+
+function limparFiltro(tipo) {
+    if (tipo === 'admin') {
+        document.getElementById('filtroAdmin').value = '';
+        // Se o DataTable existir, recarregar
+        if ($.fn.dataTable && $.fn.dataTable.isDataTable('#tabelaAdmin')) {
+            $('#tabelaAdmin').DataTable().search('').draw();
+        }
+        document.getElementById('limparFiltroAdmin').style.display = 'none';
+    } else {
+        document.getElementById('filtroOperador').value = '';
+        if ($.fn.dataTable && $.fn.dataTable.isDataTable('#tabelaOperador')) {
+            $('#tabelaOperador').DataTable().search('').draw();
+        }
+        document.getElementById('limparFiltroOperador').style.display = 'none';
+    }
+}
+
+// Verificar se jQuery existe antes de usar
+if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function() {
+        if ($('#backup-permissoes').hasClass('active show')) {
+            inicializarDataTables();
+        }
+    });
+}
+// FORÇAR SWITCHES DESABILITADOS FICAREM DESMARCADOS
+document.addEventListener('DOMContentLoaded', function() {
+    // Executar várias vezes para garantir
+    function corrigirSwitches() {
+        document.querySelectorAll('#tabelaOperador .form-check-input:disabled').forEach(function(switchEl) {
+            switchEl.checked = false;
+        });
+    }
+    
+    // Corrigir agora
+    corrigirSwitches();
+    
+    // Corrigir depois de 1 segundo
+    setTimeout(corrigirSwitches, 1000);
+    
+    // Corrigir depois de 2 segundos
+    setTimeout(corrigirSwitches, 2000);
+});
+</script>
+
+<style>
+.dataTables_filter { display: none !important; }
+.input-group-sm .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.bi-check-circle-fill { cursor: help; }
+.form-check-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.nav-tabs .nav-link { color: #495057; font-weight: 500; }
+.nav-tabs .nav-link.active { color: #0d6efd; font-weight: 600; }
+.card.border-0.bg-light { border-radius: 0.5rem; }
+.border.rounded { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.form-switch .form-check-input { width: 2.5em; height: 1.25em; margin-right: 0.5rem; }
+@media (max-width: 768px) {
+    .d-flex.justify-content-between { flex-direction: column; align-items: flex-start !important; }
+    .d-flex.align-items-center[style*="width: 250px"] { width: 100% !important; margin-top: 10px; }
+    .nav-tabs { flex-wrap: wrap; }
+    .nav-tabs .nav-item { width: 100%; margin-bottom: 0.25rem; }
+    .nav-tabs .nav-link { width: 100%; text-align: center; }
+}
+/* ===== ESPAÇAMENTO ENTRE MENSAGENS FLASH ===== */
+#flash-area {
+    gap: 8px;  /* ← Adiciona espaço de 8px entre as mensagens */
+}
+
+.flash-message {
+    margin-bottom: 0;  /* Remove margem inferior que podia estar causando acúmulo */
+}
+</style>
+{% endblock %}

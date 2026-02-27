@@ -1,0 +1,102 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Novo Usuário - Estoque Havaianas{% endblock %}
+
+{% block page_title %}Novo Usuário{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('listar_usuarios') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="content-card">
+            <form method="POST" action="{{ url_for('novo_usuario') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nome de usuário *</label>
+                        <input type="text" name="username" class="form-control" value="{{ form_data.username or '' }}" required autofocus>
+                        <small class="text-muted">Será usado para login</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Senha *</label>
+                        <input type="password" name="password" class="form-control" required>
+                        <small class="text-muted">Mínimo 6 caracteres</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nome completo</label>
+                        <input type="text" name="nome" class="form-control" value="{{ form_data.nome or '' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">E-mail</label>
+                        <input type="email" name="email" class="form-control" value="{{ form_data.email or '' }}">
+                    </div>
+                </div>
+
+                <!-- Campo Telefone -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" name="telefone" id="telefone" class="form-control" value="{{ form_data.telefone or '' }}" placeholder="(11) 99999-9999">
+                        <small class="text-muted">Digite apenas números</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <!-- Espaço vazio -->
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nível de permissão</label>
+                        <select name="admin" class="form-select">
+                            <option value="0" {% if form_data.admin == '0' or not form_data.admin %}selected{% endif %}>Operador</option>
+                            <option value="1" {% if form_data.admin == '1' %}selected{% endif %}>Administrador</option>
+                        </select>
+                        <small class="text-muted">Administradores têm acesso total</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="ativo" class="form-select">
+                            <option value="1" {% if form_data.ativo == '1' or not form_data.ativo %}selected{% endif %}>Ativo</option>
+                            <option value="0" {% if form_data.ativo == '0' %}selected{% endif %}>Inativo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    O usuário administrador pode gerenciar outros usuários e ter acesso a todas as funcionalidades.
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('listar_usuarios') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script para máscara de telefone -->
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const telefoneInput = document.getElementById('telefone');
+    if (telefoneInput) {
+        IMask(telefoneInput, {
+            mask: '(00) 00000-0000'
+        });
+    }
+});
+</script>
+{% endblock %}

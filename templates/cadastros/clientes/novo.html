@@ -1,0 +1,570 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Novo Cliente - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-person-plus me-2"></i>Novo Cliente
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('listar_clientes') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Cadastro de Cliente
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_cliente') }}" id="formCliente">
+                    <!-- Abas -->
+                    <ul class="nav nav-tabs mb-4" id="clienteTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
+                                <i class="bi bi-person me-1"></i> Dados Pessoais
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="contato-tab" data-bs-toggle="tab" data-bs-target="#contato" type="button" role="tab">
+                                <i class="bi bi-telephone me-1"></i> Contato
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="endereco-tab" data-bs-toggle="tab" data-bs-target="#endereco" type="button" role="tab">
+                                <i class="bi bi-geo-alt me-1"></i> Endereço
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="observacoes-tab" data-bs-toggle="tab" data-bs-target="#observacoes" type="button" role="tab">
+                                <i class="bi bi-chat-text me-1"></i> Observações
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="clienteTabsContent">
+                        <!-- Dados Pessoais -->
+                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        Nome Completo *
+                                    </label>
+                                    <input type="text" class="form-control" name="nome" required autofocus>
+                                    <small class="text-muted">Nome completo do cliente ou razão social</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-card-heading me-1"></i>
+                                        Tipo de Pessoa
+                                    </label>
+                                    <select class="form-select" name="tipo" id="tipoPessoa">
+                                        <option value="FISICA">Pessoa Física</option>
+                                        <option value="JURIDICA">Pessoa Jurídica</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label" id="docLabel">
+                                        <i class="bi bi-credit-card me-1"></i>
+                                        CPF *
+                                    </label>
+                                    <input type="text" class="form-control" name="cpf_cnpj" id="cpf_cnpj" placeholder="000.000.000-00" required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-file-text me-1"></i>
+                                        RG
+                                    </label>
+                                    <input type="text" class="form-control" name="rg" placeholder="MG-00.000.000">
+                                </div>
+
+                                <div class="col-12 mt-4">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Os campos marcados com * são obrigatórios
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contato -->
+                        <div class="tab-pane fade" id="contato" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        E-mail
+                                    </label>
+                                    <input type="email" class="form-control" name="email" placeholder="cliente@email.com">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        Telefone
+                                    </label>
+                                    <input type="tel" class="form-control" name="telefone" id="telefone">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-phone me-1"></i>
+                                        Celular *
+                                    </label>
+                                    <input type="tel" class="form-control" name="celular" id="celular" required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label d-block"> &nbsp; </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="whatsapp" id="whatsapp" checked>
+                                        <label class="form-check-label" for="whatsapp">
+                                            <i class="bi bi-whatsapp text-success me-1"></i>
+                                            Possui WhatsApp
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="text-info">
+                                                <i class="bi bi-megaphone me-2"></i>
+                                                Comunicação
+                                            </h6>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="receber_email">
+                                                <label class="form-check-label">
+                                                    Aceita receber e-mails promocionais
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="receber_sms">
+                                                <label class="form-check-label">
+                                                    Aceita receber SMS promocionais
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Endereço - ORGANIZADO IGUAL FORNECEDORES -->
+                        <div class="tab-pane fade" id="endereco" role="tabpanel">
+                            <div class="row g-3">
+                                <!-- Primeira linha: CEP, Logradouro e Número -->
+                                <div class="col-md-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-mailbox me-1"></i>
+                                        CEP
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="cep" id="cep" placeholder="00000-000">
+                                        <button type="button" class="btn btn-outline-primary" onclick="buscarCEP()" id="btnBuscarCep">
+                                            <i class="bi bi-search me-1"></i> Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">
+                                        <i class="bi bi-signpost me-1"></i>
+                                        Logradouro
+                                    </label>
+                                    <input type="text" class="form-control" name="logradouro" id="logradouro" placeholder="Rua, Avenida, etc.">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">
+                                        <i class="bi bi-123 me-1"></i>
+                                        Número
+                                    </label>
+                                    <input type="text" class="form-control" name="numero" id="numero" placeholder="S/N">
+                                </div>
+                                
+                                <!-- Segunda linha: Bairro, Complemento, Cidade e UF -->
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-building me-1"></i>
+                                        Bairro
+                                    </label>
+                                    <input type="text" class="form-control" name="bairro" id="bairro">
+                                </div>
+                                <div class="col-md-3" style="width: 25%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-plus-circle me-1"></i>
+                                        Complemento
+                                    </label>
+                                    <input type="text" class="form-control" name="complemento" id="complemento" placeholder="Apto, Sala, etc.">
+                                </div>
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-geo me-1"></i>
+                                        Cidade
+                                    </label>
+                                    <input type="text" class="form-control" name="cidade" id="cidade">
+                                </div>
+                                <div class="col-md-1" style="width: 10%; position: relative;">
+                                    <label class="form-label">
+                                        <i class="bi bi-map me-1"></i>
+                                        UF
+                                    </label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: white; border: 1px solid #ced4da; padding: 0.375rem 0.75rem;">
+                                            <span id="uf-selected">--</span> <span class="float-end">▼</span>
+                                        </button>
+                                        <ul class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;">
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF(''); return false;">--</a></li>
+                                            {% for uf in ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] %}
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF('{{ uf }}'); return false;">{{ uf }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <input type="hidden" name="estado" id="estado-hidden" value="">
+                                </div>
+                            </div>
+
+                            <!-- Loading (escondido inicialmente) -->
+                            <div class="row mt-2">
+                                <div class="col-12" id="cepLoading" style="display: none;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                        <span>Buscando endereço...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botão para limpar endereço -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparEndereco()">
+                                        <i class="bi bi-eraser me-1"></i> Limpar endereço
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="tab-pane fade" id="observacoes" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="form-label">
+                                        <i class="bi bi-chat-left-text me-1"></i>
+                                        Observações
+                                    </label>
+                                    <textarea class="form-control" name="observacoes" rows="6" 
+                                              placeholder="Anotações importantes sobre o cliente..."></textarea>
+                                </div>
+
+                                <div class="col-12 mt-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>
+                                                <i class="bi bi-shield-check text-success me-2"></i>
+                                                Política de Privacidade
+                                            </h6>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="aceitou_politica" id="aceitou_politica">
+                                                <label class="form-check-label" for="aceitou_politica">
+                                                    Concordo com o tratamento dos dados pessoais de acordo com a 
+                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#politicaModal">
+                                                        Política de Privacidade
+                                                    </a>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-secondary" onclick="voltarTab()">
+                            <i class="bi bi-arrow-left me-1"></i> Anterior
+                        </button>
+
+                        <div>
+                            <a href="{{ url_for('listar_clientes') }}" class="btn btn-outline-secondary me-2">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="btnSubmit">
+                                <i class="bi bi-check-circle me-1"></i> Salvar Cliente
+                            </button>
+                        </div>
+
+                        <button type="button" class="btn btn-secondary" onclick="avancarTab()">
+                            Próximo <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Política de Privacidade -->
+<div class="modal fade" id="politicaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Política de Privacidade</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Conteúdo da política de privacidade...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS com ajustes responsivos -->
+<style>
+@media (min-width: 768px) {
+    .col-md-1 {
+        flex: 0 0 auto;
+        width: 10%;
+    }
+    .col-md-4 {
+        flex: 0 0 auto;
+        width: 32%;
+    }
+    .col-md-3 {
+        flex: 0 0 auto;
+        width: 25%;
+    }
+}
+
+/* Ajuste para o dropdown */
+.dropdown-menu {
+    min-width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* BOTÃO UF - SEM NENHUM EFEITO (CURSOR PADRÃO) */
+button[data-bs-toggle="dropdown"] {
+    cursor: default;
+    background-color: white;
+    color: #212529;
+}
+
+button[data-bs-toggle="dropdown"]:hover,
+button[data-bs-toggle="dropdown"]:focus,
+button[data-bs-toggle="dropdown"]:active {
+    background-color: white;
+    color: #212529;
+    border-color: #ced4da;
+    box-shadow: none;
+    outline: none;
+}
+
+/* LISTA - CURSOR PADRÃO E HOVER DESTACADO */
+.dropdown-item {
+    background-color: white;
+    color: #212529;
+    cursor: default;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #e9ecef !important;
+    color: #212529;
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.2em;
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+// Função para selecionar UF
+function selectUF(valor) {
+    document.getElementById('uf-selected').textContent = valor || '--';
+    document.getElementById('estado-hidden').value = valor;
+}
+
+// Máscaras para os campos
+document.addEventListener("DOMContentLoaded", function () {
+    // Máscara para CPF/CNPJ
+    const cpfMask = IMask(document.getElementById("cpf_cnpj"), {
+        mask: "000.000.000-00",
+    });
+
+    // Máscara para telefone
+    IMask(document.getElementById("telefone"), {
+        mask: "(00) 0000-0000",
+    });
+
+    IMask(document.getElementById("celular"), {
+        mask: "(00) 00000-0000",
+    });
+
+    // Máscara para CEP
+    IMask(document.getElementById("cep"), {
+        mask: "00000-000",
+    });
+
+    // Alternar entre CPF e CNPJ
+    document
+        .getElementById("tipoPessoa")
+        .addEventListener("change", function () {
+            const label = document.getElementById("docLabel");
+            const input = document.getElementById("cpf_cnpj");
+
+            if (this.value === "JURIDICA") {
+                label.innerHTML = '<i class="bi bi-credit-card me-1"></i>CNPJ *';
+                input.placeholder = "00.000.000/0000-00";
+                cpfMask.updateOptions({
+                    mask: "00.000.000/0000-00",
+                });
+            } else {
+                label.innerHTML = '<i class="bi bi-credit-card me-1"></i>CPF *';
+                input.placeholder = "000.000.000-00";
+                cpfMask.updateOptions({
+                    mask: "000.000.000-00",
+                });
+            }
+        });
+
+    // VALIDAÇÃO DA POLÍTICA
+    document
+        .getElementById("formCliente")
+        .addEventListener("submit", function (e) {
+            const politica = document.getElementById("aceitou_politica");
+
+            if (!politica.checked) {
+                e.preventDefault();
+                document.querySelector("#observacoes-tab").click();
+                politica.focus();
+                alert("❌ Você precisa aceitar a política de privacidade!");
+                return false;
+            }
+
+            const submitBtn = document.getElementById('btnSubmit');
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Salvando...';
+            submitBtn.disabled = true;
+
+            return true;
+        });
+});
+
+// Navegação entre abas
+let currentTab = 0;
+const tabs = document.querySelectorAll("#clienteTabs .nav-link");
+
+function showTab(n) {
+    tabs[n].click();
+    currentTab = n;
+}
+
+function avancarTab() {
+    if (currentTab < tabs.length - 1) {
+        showTab(currentTab + 1);
+    }
+}
+
+function voltarTab() {
+    if (currentTab > 0) {
+        showTab(currentTab - 1);
+    }
+}
+
+// FUNÇÃO PARA BUSCAR CEP - ATUALIZADA
+function buscarCEP() {
+    const cepInput = document.getElementById("cep");
+    const cep = cepInput.value.replace(/\D/g, "");
+
+    if (cep.length !== 8) {
+        alert("❌ Digite um CEP válido com 8 números!");
+        cepInput.focus();
+        return;
+    }
+
+    // Mostrar loading
+    document.getElementById("cepLoading").style.display = "block";
+    document.getElementById("btnBuscarCep").disabled = true;
+
+    // Buscar na API ViaCEP
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then((response) => response.json())
+        .then((data) => {
+            // Esconder loading
+            document.getElementById("cepLoading").style.display = "none";
+            document.getElementById("btnBuscarCep").disabled = false;
+
+            if (data.erro) {
+                alert("❌ CEP não encontrado!");
+                return;
+            }
+
+            // Preencher os campos automaticamente
+            document.getElementById("logradouro").value = data.logradouro || "";
+            document.getElementById("bairro").value = data.bairro || "";
+            document.getElementById("cidade").value = data.localidade || "";
+            
+            // Atualizar o dropdown com a UF retornada
+            if (data.uf) {
+                selectUF(data.uf);
+            }
+            
+            document.getElementById("numero").focus();
+
+            // Mensagem de sucesso
+            alert("✅ Endereço encontrado e preenchido automaticamente!");
+        })
+        .catch((error) => {
+            // Esconder loading
+            document.getElementById("cepLoading").style.display = "none";
+            document.getElementById("btnBuscarCep").disabled = false;
+
+            console.error("Erro:", error);
+            alert("❌ Erro ao buscar o CEP. Tente novamente.");
+        });
+}
+
+// Função para limpar endereço
+function limparEndereco() {
+    document.getElementById("logradouro").value = "";
+    document.getElementById("numero").value = "";
+    document.getElementById("complemento").value = "";
+    document.getElementById("bairro").value = "";
+    document.getElementById("cidade").value = "";
+    selectUF('');
+    document.getElementById("cep").focus();
+}
+
+// Permitir buscar CEP ao pressionar Enter no campo CEP
+document.getElementById("cep").addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        buscarCEP();
+    }
+});
+</script>
+{% endblock %}

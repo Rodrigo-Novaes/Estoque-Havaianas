@@ -1,0 +1,1709 @@
+{% extends "layout/base.html" %}
+
+{% block title %}PDV - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-cash-coin me-2"></i>Ponto de Venda
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+  <button
+    class="btn btn-outline-primary btn-sm"
+    onclick="abrirModalBuscarVendas()"
+    title="Buscar vendas para reimprimir"
+  >
+    <i class="bi bi-printer me-1"></i> Reimprimir Venda
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row g-3">
+    <!-- Coluna Esquerda - 70% -->
+    <div class="col-lg-8">
+      <!-- Busca -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body p-3">
+          <div class="input-group">
+            <span class="input-group-text bg-primary text-white">
+              <i class="bi bi-search"></i>
+            </span>
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              id="buscaRapida"
+              placeholder="Digite código, produto, cor ou tamanho..."
+              autocomplete="off"
+              autofocus
+            />
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              id="btnLimparBusca"
+              onclick="limparBusca()"
+              title="Limpar busca"
+              style="display: none;"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="bi bi-keyboard me-1"></i>
+              Pressione <kbd>F2</kbd> para finalizar | <kbd>F3</kbd> para
+              imprimir | <kbd>F5</kbd> para buscar | <kbd>ESC</kbd> para limpar
+            </small>
+          </div>
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="bi bi-upc-scan me-1"></i>
+              <strong>Leitor de Código de Barras:</strong> Aponte e escaneie -
+              adiciona automaticamente
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultados da Busca -->
+      <div
+        class="card shadow-sm mb-3"
+        id="cardResultados"
+        style="display: none;"
+      >
+        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Produtos Encontrados</h6>
+          <span class="badge bg-secondary" id="contadorResultados">0</span>
+        </div>
+        <div class="card-body p-2" style="max-height: 300px; overflow-y: auto">
+          <div class="row g-2" id="resultadosProdutos">
+            <!-- Resultados via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Carrinho -->
+      <div class="card shadow-sm">
+        <div
+          class="card-header bg-light d-flex justify-content-between align-items-center py-2"
+        >
+          <h6 class="mb-0">
+            <i class="bi bi-cart me-2"></i>
+            Carrinho de Venda
+          </h6>
+          <span class="badge bg-primary" id="contadorCarrinho">0 itens</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tabelaCarrinho">
+              <thead class="table-light">
+                <tr>
+                  <th width="5%">#</th>
+                  <th width="40%">Produto</th>
+                  <th width="15%">Preço</th>
+                  <th width="20%">Quantidade</th>
+                  <th width="15%">Subtotal</th>
+                  <th width="5%"></th>
+                </tr>
+              </thead>
+              <tbody id="corpoCarrinho">
+                <tr id="carrinhoVazio">
+                  <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-cart display-4 mb-3"></i>
+                    <p>Nenhum produto no carrinho</p>
+                    <small>Busque produtos acima para adicionar</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coluna Direita - 30% -->
+    <div class="col-lg-4">
+      <!-- Resumo -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0">Resumo da Venda</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-2 d-flex justify-content-between">
+            <span>Subtotal:</span>
+            <strong id="subtotalVenda">R$ 0,00</strong>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small mb-1">Desconto (%)</label>
+            <div class="input-group input-group-sm">
+              <input
+                type="number"
+                class="form-control"
+                id="descontoPercentual"
+                value="0"
+                min="0"
+                max="100"
+                step="0.1"
+                oninput="calcularTotais()"
+              />
+              <span class="input-group-text">%</span>
+              <span class="input-group-text" id="valorDescontoTexto">R$ 0,00</span>
+            </div>
+          </div>
+
+          <hr class="my-2" />
+
+          <div class="d-flex justify-content-between fw-bold fs-5">
+            <span>TOTAL:</span>
+            <span class="text-primary" id="totalVenda">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagamento -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0">Pagamento</h6>
+        </div>
+        <div class="card-body p-2">
+          <div class="btn-group-vertical w-100" role="group">
+            <button
+              type="button"
+              class="btn btn-outline-success text-start forma-pagamento"
+              data-forma="DINHEIRO"
+              onclick="selecionarPagamento('DINHEIRO', this)"
+            >
+              <i class="bi bi-cash-coin me-2"></i>
+              <strong>Dinheiro</strong>
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-outline-primary text-start forma-pagamento"
+              data-forma="PIX"
+              onclick="selecionarPagamento('PIX', this)"
+            >
+              <i class="bi bi-qr-code me-2"></i>
+              <strong>PIX</strong>
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-outline-info text-start forma-pagamento"
+              data-forma="CARTAO_DEBITO"
+              onclick="selecionarPagamento('CARTAO_DEBITO', this)"
+            >
+              <i class="bi bi-credit-card me-2"></i>
+              <strong>Cartão Débito</strong>
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-outline-warning text-start forma-pagamento"
+              data-forma="CARTAO_CREDITO"
+              onclick="selecionarPagamento('CARTAO_CREDITO', this)"
+            >
+              <i class="bi bi-credit-card-2-back me-2"></i>
+              <strong>Cartão Crédito</strong>
+            </button>
+          </div>
+
+          <!-- Troco (só para Dinheiro) -->
+          <div id="trocoSection" class="mt-3" style="display: none">
+            <label class="form-label small mb-1">Valor Recebido (R$)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">R$</span>
+              <input
+                type="text"
+                class="form-control"
+                id="valorRecebido"
+                placeholder="0,00"
+                value=""
+                oninput="calcularTroco()"
+                onblur="formatarValorMonetario(this); calcularTroco();"
+                onfocus="this.select()"
+              />
+            </div>
+            <div class="mt-2">
+              <small>Troco:</small>
+              <strong class="text-success d-block" id="valorTroco">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cliente -->
+      <div class="card shadow-sm mb-3">
+        <div
+          class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
+        >
+          <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cliente</h6>
+          <div>
+            <button
+              class="btn btn-sm btn-outline-primary me-1"
+              onclick="abrirModalBuscarCliente()"
+              title="Buscar cliente"
+            >
+              <i class="bi bi-search"></i>
+            </button>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              onclick="limparCliente()"
+            >
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body p-2">
+          <div class="mb-2">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              id="nomeCliente"
+              placeholder="Nome do cliente"
+              readonly
+            />
+          </div>
+          <div class="mb-0">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              id="cpfCliente"
+              placeholder="CPF ou CNPJ"
+              readonly
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Vendedor -->
+      <div class="card shadow-sm mb-3">
+        <div
+          class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
+        >
+          <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Vendedor</h6>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            onclick="limparVendedor()"
+          >
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+        <div class="card-body p-2">
+          <div class="mb-0">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              id="nomeVendedor"
+              placeholder="Nome do vendedor"
+              value="{{ session.usuario_nome }}"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Finalização -->
+      <div class="d-grid gap-2">
+        <button
+          class="btn btn-success btn-lg py-3"
+          id="btnFinalizar"
+          onclick="finalizarVenda()"
+          disabled
+        >
+          <i class="bi bi-check-circle me-2"></i>
+          <strong>FINALIZAR VENDA</strong>
+          <small class="d-block">(F2)</small>
+        </button>
+
+        <button
+          class="btn btn-outline-danger"
+          onclick="cancelarVendaCompleta()"
+        >
+          <i class="bi bi-trash me-2"></i>
+          Cancelar Venda
+        </button>
+      </div>
+
+      <!-- Atalhos -->
+      <div class="mt-3 text-center">
+        <small class="text-muted">
+          <kbd>F1</kbd> Nova Venda | <kbd>F2</kbd> Finalizar |
+          <kbd>F3</kbd> Imprimir | <kbd>F5</kbd> Buscar
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Quantidade -->
+<div class="modal fade" id="modalQuantidade" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Quantidade</h6>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="produtoSelecionado" class="mb-3">
+          <img id="produtoImagemModal" src="" class="img-fluid rounded mb-2 border" style="max-height: 100px; display: none; background-color: #f8f9fa; padding: 5px;">
+          <p id="produtoDescricaoModal" class="fw-bold mb-1"></p>
+          <small id="produtoDetalhesModal" class="text-muted"></small>
+        </div>
+
+        <div class="input-group input-group-lg mb-3">
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            onclick="alterarQuantidadeModal(-1)"
+          >
+            <i class="bi bi-dash"></i>
+          </button>
+          <input
+            type="number"
+            class="form-control text-center"
+            id="quantidadeInput"
+            value="1"
+            min="1"
+            max="999"
+          />
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            onclick="alterarQuantidadeModal(1)"
+          >
+            <i class="bi bi-plus"></i>
+          </button>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" onclick="adicionarAoCarrinho()">
+            <i class="bi bi-check-circle me-2"></i> Adicionar
+          </button>
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Buscar Cliente - CORRIGIDO COM BOTÃO X -->
+<div class="modal fade" id="modalBuscarCliente" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-person-badge me-2"></i>Buscar Cliente
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="bi bi-search"></i>
+            </span>
+            <input
+              type="text"
+              class="form-control"
+              id="buscaClienteInput"
+              placeholder="Digite nome, CPF ou CNPJ..."
+              autocomplete="off"
+              oninput="verificarBotaoLimparCliente()"
+            />
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              id="btnLimparBuscaCliente"
+              onclick="limparBuscaCliente()"
+              style="display: none;"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <small class="text-muted">Deixe em branco para ver todos os clientes</small>
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto">
+          <table class="table table-sm table-hover" id="tabelaClientesModal">
+            <thead class="table-light">
+              <tr>
+                <th>Nome</th>
+                <th>Documento</th>
+                <th>Celular</th>
+                <th width="100px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="resultadosClientes">
+              <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                  <i class="bi bi-search display-6 mb-3"></i>
+                  <p>Digite para buscar clientes</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Buscar Vendas para Reimpressão -->
+<div class="modal fade" id="modalBuscarVendas" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-printer me-2"></i>Buscar Venda para Reimprimir
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <!-- Filtros com busca automática -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small">Número da Venda</label>
+            <div class="input-group">
+              <input
+                type="number"
+                class="form-control"
+                id="buscaNumeroVenda"
+                placeholder="Digite o número..."
+                autocomplete="off"
+                oninput="buscarVendasAuto()"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                id="btnLimparNumeroVenda"
+                onclick="limparNumeroVenda()"
+                style="display: none;"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Data</label>
+            <div class="input-group">
+              <input
+                type="date"
+                class="form-control"
+                id="buscaDataVenda"
+                value=""
+                oninput="buscarVendasAuto()"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                id="btnLimparDataVenda"
+                onclick="limparDataVenda()"
+                style="display: none;"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultados -->
+        <div
+          class="table-responsive"
+          style="max-height: 400px; overflow-y: auto"
+        >
+          <table class="table table-sm table-hover" id="tabelaVendasModal">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Data/Hora</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th width="100px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="resultadosVendas">
+              <tr>
+                <td colspan="5" class="text-center py-4">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                  </div>
+                  <p class="mt-2 text-muted">Carregando vendas...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables CSS e JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Comprovante -->
+<script src="{{ url_for('static', filename='js/comprovante/comprovante.js') }}"></script>
+
+<script>
+// ========== VARIÁVEIS GLOBAIS ==========
+let carrinho = [];
+let produtoSelecionado = null;
+let formaPagamentoSelecionada = '';
+let modalQuantidade = null;
+let modalBuscarCliente = null;
+let modalBuscarVendas = null;
+let tabelaClientes = null;
+let tabelaVendas = null;
+
+// ========== FUNÇÕES DE FORMATAÇÃO ==========
+function formatarMoeda(valor) {
+    return valor.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    });
+}
+
+function formatarCPF(cpf) {
+    if (!cpf) return '';
+    cpf = cpf.replace(/\D/g, '');
+    if (cpf.length === 11) {
+        return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    if (cpf.length === 14) {
+        return cpf.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    return cpf;
+}
+
+// ========== FUNÇÃO PARA FORMATAR VALOR MONETÁRIO ==========
+function formatarValorMonetario(input) {
+    if (!input) return;
+    
+    let valor = input.value.trim();
+    
+    // Se já está formatado (contém vírgula ou ponto), normaliza
+    if (valor.includes(',') || valor.includes('.')) {
+        // Remove pontos de milhar e substitui vírgula por ponto para conversão
+        let valorLimpo = valor.replace(/\./g, '');
+        valorLimpo = valorLimpo.replace(',', '.');
+        let numero = parseFloat(valorLimpo) || 0;
+        
+        // Reformata corretamente
+        input.value = numero.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        return;
+    }
+    
+    // Se é só número (ex: "5" ou "500")
+    let numeros = valor.replace(/\D/g, '');
+    
+    if (numeros === '' || numeros === '0') {
+        input.value = '';
+        return;
+    }
+    
+    // Converte para número e formata
+    let valorNumerico = parseInt(numeros);
+    
+    // Formata como moeda brasileira
+    input.value = valorNumerico.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// ========== FUNÇÃO PARA LIMPAR VENDEDOR ==========
+function limparVendedor() {
+    document.getElementById('nomeVendedor').value = '';
+}
+
+// ========== FUNÇÃO PARA CARREGAR IMAGEM ==========
+function carregarImagemProduto(produtoId, elementoImg) {
+    if (!produtoId || !elementoImg) return;
+    
+    fetch(`/api/produto/imagem/${produtoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.imagem) {
+                elementoImg.src = `/uploads/produtos/${data.imagem}`;
+            }
+        })
+        .catch(err => console.error('Erro ao carregar imagem:', err));
+}
+
+// ========== FUNÇÕES DE BUSCA ==========
+document.getElementById('buscaRapida').addEventListener('input', function(e) {
+    const termo = e.target.value.trim();
+    const btnLimpar = document.getElementById('btnLimparBusca');
+    
+    if (termo.length >= 2) {
+        buscarProdutos(termo);
+        btnLimpar.style.display = 'block';
+    } else {
+        document.getElementById('cardResultados').style.display = 'none';
+        btnLimpar.style.display = 'none';
+    }
+});
+
+document.getElementById('buscaRapida').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const termo = this.value.trim();
+        if (termo.length >= 2) {
+            buscarProdutos(termo);
+        }
+    }
+});
+
+function limparBusca() {
+    document.getElementById('buscaRapida').value = '';
+    document.getElementById('buscaRapida').focus();
+    document.getElementById('cardResultados').style.display = 'none';
+    document.getElementById('btnLimparBusca').style.display = 'none';
+}
+
+async function buscarProdutos(termo) {
+    try {
+        const response = await fetch(`/api/pdv/buscar?q=${encodeURIComponent(termo)}`);
+        const produtos = await response.json();
+        
+        const container = document.getElementById('resultadosProdutos');
+        const card = document.getElementById('cardResultados');
+        const contador = document.getElementById('contadorResultados');
+        
+        if (produtos.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-4 text-muted">
+                    <i class="bi bi-emoji-frown display-4"></i>
+                    <p class="mt-2">Nenhum produto encontrado</p>
+                </div>
+            `;
+            contador.textContent = '0';
+        } else {
+            container.innerHTML = '';
+            produtos.forEach((produto, index) => {
+                const imgId = `produto-img-${index}`;
+                
+                container.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-hover" onclick="selecionarProduto(${JSON.stringify(produto).replace(/"/g, '&quot;')})">
+                            <div class="card-body p-2">
+                                <div class="d-flex align-items-center" style="gap: 12px;">
+                                    <img id="${imgId}"
+                                         src="/static/img/no-image-small.png" 
+                                         class="rounded" 
+                                         style="width: 50px; height: 50px; object-fit: contain; background-color: #f8f9fa; border: 1px solid #dee2e6; margin-left: 5px;">
+                                    <div style="margin-left: 5px;">
+                                        <strong>${produto.descricao}</strong><br>
+                                        <small class="text-muted">${produto.sku}</small><br>
+                                        <span class="badge bg-success">${formatarMoeda(produto.preco)}</span>
+                                        <small class="text-muted"> Estoque: ${produto.estoque}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            contador.textContent = produtos.length;
+            
+            // Carregar imagens depois de inserir no DOM
+            setTimeout(() => {
+                produtos.forEach((produto, index) => {
+                    const imgElement = document.getElementById(`produto-img-${index}`);
+                    if (imgElement) {
+                        carregarImagemProduto(produto.produto_id, imgElement);
+                    }
+                });
+            }, 100);
+        }
+        
+        card.style.display = 'block';
+        
+    } catch (error) {
+        console.error('Erro na busca:', error);
+    }
+}
+
+// ========== FUNÇÕES DO PRODUTO SELECIONADO ==========
+function selecionarProduto(produto) {
+    produtoSelecionado = produto;
+    
+    document.getElementById('produtoDescricaoModal').textContent = produto.descricao;
+    document.getElementById('produtoDetalhesModal').textContent = 
+        `${produto.sku} | Estoque: ${produto.estoque}`;
+    document.getElementById('quantidadeInput').value = 1;
+    document.getElementById('quantidadeInput').max = produto.estoque;
+    
+    // Carregar imagem no modal
+    const imgModal = document.getElementById('produtoImagemModal');
+    
+    fetch(`/api/produto/imagem/${produto.produto_id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.imagem) {
+                imgModal.src = `/uploads/produtos/${data.imagem}`;
+                imgModal.style.display = 'block';
+            } else {
+                imgModal.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.log('Erro ao carregar imagem:', err);
+            imgModal.style.display = 'none';
+        });
+    
+    modalQuantidade.show();
+}
+
+function alterarQuantidadeModal(delta) {
+    const input = document.getElementById('quantidadeInput');
+    let valor = parseInt(input.value) || 1;
+    valor += delta;
+    if (valor >= 1 && valor <= produtoSelecionado.estoque) {
+        input.value = valor;
+    }
+}
+
+function adicionarAoCarrinho() {
+    const quantidade = parseInt(document.getElementById('quantidadeInput').value);
+    
+    // Verificar se já existe no carrinho (pelo ID da grade)
+    const existente = carrinho.findIndex(item => item.grade_id === produtoSelecionado.id);
+    
+    if (existente >= 0) {
+        const novaQuantidade = carrinho[existente].quantidade + quantidade;
+        if (novaQuantidade > produtoSelecionado.estoque) {
+            alert(`Estoque insuficiente! Disponível: ${produtoSelecionado.estoque}`);
+            return;
+        }
+        carrinho[existente].quantidade = novaQuantidade;
+    } else {
+        // Salvar todas as informações necessárias
+        carrinho.push({
+            grade_id: produtoSelecionado.id,        // ID da grade (para a venda)
+            produto_id: produtoSelecionado.produto_id, // ID do produto (para a imagem)
+            sku: produtoSelecionado.sku,
+            descricao: produtoSelecionado.descricao,
+            preco: produtoSelecionado.preco,
+            quantidade: quantidade,
+            estoque: produtoSelecionado.estoque
+        });
+    }
+    
+    atualizarCarrinho();
+    
+    // ===== LIMPAR A BUSCA APÓS ADICIONAR O PRODUTO =====
+    limparBusca();
+    
+    modalQuantidade.hide();
+}
+
+// ========== FUNÇÕES DO CARRINHO ==========
+function atualizarCarrinho() {
+    const tbody = document.getElementById('corpoCarrinho');
+    const contador = document.getElementById('contadorCarrinho');
+    
+    if (carrinho.length === 0) {
+        tbody.innerHTML = `
+            <tr id="carrinhoVazio">
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-cart display-4 mb-3"></i>
+                    <p>Nenhum produto no carrinho</p>
+                    <small>Busque produtos acima para adicionar</small>
+                </td>
+            </tr>
+        `;
+        contador.textContent = '0 itens';
+        calcularTotais();
+        return;
+    }
+    
+    let html = '';
+    
+    // Criar o HTML do carrinho
+    carrinho.forEach((item, index) => {
+        const subtotal = item.quantidade * item.preco;
+        
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center" style="gap: 12px;">
+                        <img id="carrinho-img-${index}"
+                             src="/static/img/no-image-small.png" 
+                             class="rounded" 
+                             style="width: 40px; height: 40px; object-fit: contain; background-color: #f8f9fa; border: 1px solid #dee2e6; margin-left: 5px;">
+                        <div style="margin-left: 5px;">
+                            <strong>${item.descricao}</strong><br>
+                            <small class="text-muted">${item.sku}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>${formatarMoeda(item.preco)}</td>
+                <td>
+                    <div class="input-group input-group-sm" style="width: 120px;">
+                        <button class="btn btn-outline-secondary" type="button" onclick="alterarQuantidadeCarrinho(${index}, -1)">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <input type="number" class="form-control text-center" value="${item.quantidade}" min="1" max="${item.estoque}" 
+                               onchange="atualizarQuantidadeCarrinho(${index}, this.value)">
+                        <button class="btn btn-outline-secondary" type="button" onclick="alterarQuantidadeCarrinho(${index}, 1)">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </td>
+                <td>${formatarMoeda(subtotal)}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="removerItemCarrinho(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    // Inserir o HTML no tbody
+    tbody.innerHTML = html;
+    contador.textContent = `${carrinho.length} ${carrinho.length === 1 ? 'item' : 'itens'}`;
+    
+    // Carregar imagens do carrinho depois de inserir no DOM
+    setTimeout(() => {
+        carrinho.forEach((item, index) => {
+            const imgElement = document.getElementById(`carrinho-img-${index}`);
+            if (imgElement) {
+                carregarImagemProduto(item.produto_id, imgElement);
+            }
+        });
+    }, 100);
+    
+    calcularTotais();
+}
+
+function alterarQuantidadeCarrinho(index, delta) {
+    const item = carrinho[index];
+    const novaQuantidade = item.quantidade + delta;
+    if (novaQuantidade >= 1 && novaQuantidade <= item.estoque) {
+        item.quantidade = novaQuantidade;
+        atualizarCarrinho();
+    }
+}
+
+function atualizarQuantidadeCarrinho(index, valor) {
+    const quantidade = parseInt(valor);
+    if (quantidade >= 1 && quantidade <= carrinho[index].estoque) {
+        carrinho[index].quantidade = quantidade;
+        atualizarCarrinho();
+    }
+}
+
+function removerItemCarrinho(index) {
+    if (confirm('Remover este item do carrinho?')) {
+        carrinho.splice(index, 1);
+        atualizarCarrinho();
+    }
+}
+
+function cancelarVendaCompleta() {
+    if (carrinho.length > 0) {
+        if (confirm('Cancelar toda a venda?')) {
+            carrinho = [];
+            atualizarCarrinho();
+            limparCliente();
+            limparVendedor();
+            document.getElementById('descontoPercentual').value = 0;
+            document.querySelectorAll('.forma-pagamento').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            formaPagamentoSelecionada = '';
+            document.getElementById('trocoSection').style.display = 'none';
+            document.getElementById('buscaRapida').focus();
+            
+            // REDIRECIONAR com mensagem de cancelamento
+            window.location.href = '/pdv?mensagem=cancelada';
+        }
+    }
+}
+
+// ========== FUNÇÕES DE CÁLCULO ==========
+function calcularTotais() {
+    const subtotal = carrinho.reduce((acc, item) => acc + (item.quantidade * item.preco), 0);
+    const descontoPercentual = parseFloat(document.getElementById('descontoPercentual').value) || 0;
+    const descontoValor = subtotal * (descontoPercentual / 100);
+    const total = subtotal - descontoValor;
+    
+    document.getElementById('subtotalVenda').textContent = formatarMoeda(subtotal);
+    document.getElementById('valorDescontoTexto').textContent = formatarMoeda(descontoValor);
+    document.getElementById('totalVenda').textContent = formatarMoeda(total);
+    
+    if (formaPagamentoSelecionada === 'DINHEIRO') {
+        calcularTroco();
+    }
+    
+    document.getElementById('btnFinalizar').disabled = carrinho.length === 0;
+}
+
+// ========== FUNÇÕES DE PAGAMENTO ==========
+function selecionarPagamento(forma, elemento) {
+    document.querySelectorAll('.forma-pagamento').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    elemento.classList.add('active');
+    formaPagamentoSelecionada = forma;
+    
+    if (forma === 'DINHEIRO') {
+        document.getElementById('trocoSection').style.display = 'block';
+        const campoValor = document.getElementById('valorRecebido');
+        campoValor.value = '';  // Começa vazio
+        campoValor.focus();
+        calcularTroco();
+    } else {
+        document.getElementById('trocoSection').style.display = 'none';
+    }
+}
+
+// ========== FUNÇÃO CALCULAR TROCO ==========
+function calcularTroco() {
+    const totalTexto = document.getElementById('totalVenda').textContent;
+    const total = parseFloat(totalTexto.replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
+    
+    const recebidoTexto = document.getElementById('valorRecebido').value;
+    
+    // Se estiver vazio, considera 0
+    if (recebidoTexto === '') {
+        document.getElementById('valorTroco').textContent = formatarMoeda(0 - total);
+        return;
+    }
+    
+    // Converte para número (aceita tanto "5" quanto "5,00" ou "5.00")
+    let valorLimpo = recebidoTexto.replace(/\./g, '');
+    valorLimpo = valorLimpo.replace(',', '.');
+    
+    const recebido = parseFloat(valorLimpo) || 0;
+    
+    const troco = recebido - total;
+    document.getElementById('valorTroco').textContent = formatarMoeda(troco >= 0 ? troco : 0);
+}
+
+// ========== FUNÇÕES DE CLIENTE ==========
+function abrirModalBuscarCliente() {
+    modalBuscarCliente.show();
+    document.getElementById('buscaClienteInput').value = '';
+    document.getElementById('buscaClienteInput').focus();
+    document.getElementById('btnLimparBuscaCliente').style.display = 'none';
+    carregarTodosClientes();
+    
+    // Remover listener anterior para evitar duplicação
+    $('#buscaClienteInput').off('keyup');
+}
+
+// ========== FUNÇÃO PARA CONTROLAR BOTÃO LIMPAR DO MODAL CLIENTE ==========
+function verificarBotaoLimparCliente() {
+    const valor = document.getElementById('buscaClienteInput').value.trim();
+    const btnLimpar = document.getElementById('btnLimparBuscaCliente');
+    
+    if (valor !== '') {
+        btnLimpar.style.display = 'block';
+    } else {
+        btnLimpar.style.display = 'none';
+    }
+}
+
+function limparBuscaCliente() {
+    document.getElementById('buscaClienteInput').value = '';
+    document.getElementById('btnLimparBuscaCliente').style.display = 'none';
+    
+    if (tabelaClientes) {
+        tabelaClientes.search('').draw();
+    } else {
+        carregarTodosClientes();
+    }
+}
+
+async function carregarTodosClientes() {
+    const tbody = document.getElementById('resultadosClientes');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2 text-muted">Carregando clientes...</p>
+            </td>
+        </tr>
+    `;
+    
+    try {
+        const response = await fetch('/api/clientes/buscar?q=');
+        const clientes = await response.json();
+        renderizarClientes(clientes);
+    } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle display-6 mb-3"></i>
+                    <p>Erro ao carregar clientes</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function renderizarClientes(clientes) {
+    const tbody = document.getElementById('resultadosClientes');
+    
+    if (!clientes || clientes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-emoji-frown display-6 mb-3"></i>
+                    <p>Nenhum cliente encontrado</p>
+                </td>
+            </tr>
+        `;
+        
+        // Destruir DataTable se existir
+        if (tabelaClientes) {
+            tabelaClientes.destroy();
+            tabelaClientes = null;
+        }
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    clientes.forEach(cliente => {
+        const documentoFormatado = formatarCPF(cliente.cpf_cnpj);
+        
+        tbody.innerHTML += `
+            <tr>
+                <td>${cliente.nome}</td>
+                <td>${documentoFormatado || '-'}</td>
+                <td>${cliente.celular || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="selecionarCliente('${cliente.nome.replace(/'/g, "\\'")}', '${cliente.cpf_cnpj || ''}')">
+                        <i class="bi bi-check-circle me-1"></i> Selecionar
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    // Destruir instância anterior se existir
+    if (tabelaClientes) {
+        tabelaClientes.destroy();
+        tabelaClientes = null;
+    }
+    
+    // Inicializar nova instância com tradução embutida e busca habilitada
+    setTimeout(() => {
+        tabelaClientes = $('#tabelaClientesModal').DataTable({
+            language: {
+                "sEmptyTable": "Nenhum registro encontrado",
+                "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                "sInfoPostFix": "",
+                "sInfoThousands": ".",
+                "sLengthMenu": "_MENU_ resultados por página",
+                "sLoadingRecords": "Carregando...",
+                "sProcessing": "Processando...",
+                "sZeroRecords": "Nenhum registro encontrado",
+                "sSearch": "Pesquisar:",
+                "oPaginate": {
+                    "sNext": "Próximo",
+                    "sPrevious": "Anterior",
+                    "sFirst": "Primeiro",
+                    "sLast": "Último"
+                },
+                "oAria": {
+                    "sSortAscending": ": Ordenar colunas de forma ascendente",
+                    "sSortDescending": ": Ordenar colunas de forma descendente"
+                }
+            },
+            pageLength: 10,
+            order: [[0, 'asc']],
+            searching: true,
+            info: true,
+            paging: true,
+            pagingType: 'simple_numbers'
+        });
+        
+        // Conectar o campo de busca externo ao DataTables
+        $('#buscaClienteInput').on('keyup', function() {
+            if (tabelaClientes) {
+                tabelaClientes.search(this.value).draw();
+            }
+        });
+        
+    }, 100);
+}
+
+function selecionarCliente(nome, cpf) {
+    document.getElementById('nomeCliente').value = nome;
+    document.getElementById('cpfCliente').value = formatarCPF(cpf);
+    modalBuscarCliente.hide();
+}
+
+function limparCliente() {
+    document.getElementById('nomeCliente').value = '';
+    document.getElementById('cpfCliente').value = '';
+}
+
+// ========== FUNÇÕES DE FINALIZAÇÃO ==========
+async function finalizarVenda() {
+    if (!formaPagamentoSelecionada) {
+        alert('Selecione a forma de pagamento!');
+        return;
+    }
+    
+    if (formaPagamentoSelecionada === 'DINHEIRO') {
+        const recebidoTexto = document.getElementById('valorRecebido').value;
+        
+        if (recebidoTexto === '') {
+            alert('Digite o valor recebido!');
+            document.getElementById('valorRecebido').focus();
+            return;
+        }
+        
+        // Converte para número (aceita tanto "5" quanto "5,00" ou "5.00")
+        let valorLimpo = recebidoTexto.replace(/\./g, '');
+        valorLimpo = valorLimpo.replace(',', '.');
+        const recebido = parseFloat(valorLimpo) || 0;
+        
+        const totalTexto = document.getElementById('totalVenda').textContent;
+        const total = parseFloat(totalTexto.replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
+        
+        if (recebido < total) {
+            alert('Valor recebido menor que o total da venda!');
+            return;
+        }
+    }
+    
+    // 🔥 CONFIRMAÇÃO ANTES DE FINALIZAR
+    if (!confirm('Confirmar finalização da venda?')) {
+        return;
+    }
+    
+    const itens = carrinho.map(item => ({
+        grade_id: item.grade_id,
+        quantidade: item.quantidade,
+        preco: item.preco
+    }));
+    
+    const desconto = parseFloat(document.getElementById('descontoPercentual').value) || 0;
+    
+    const dados = {
+        itens: itens,
+        forma_pagamento: formaPagamentoSelecionada,
+        cliente: document.getElementById('nomeCliente').value,
+        cpf: document.getElementById('cpfCliente').value.replace(/\D/g, ''),
+        desconto: desconto,
+        vendedor: document.getElementById('nomeVendedor').value || '{{ session.usuario_nome }}'
+    };
+    
+    try {
+        const response = await fetch('/api/pdv/venda', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // IMPRESSÃO
+            fetch(`/api/pdv/venda/${result.venda_id}/comprovante`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const janela = window.open('', 'Comprovante', 
+                            'width=900,height=600,top=100,left=100,scrollbars=yes'
+                        );
+                        
+                        if (!janela) {
+                            alert('Permita popups para ver o comprovante!');
+                            return;
+                        }
+                        
+                        const dadosImpressao = {
+                            venda_id: data.comprovante.id,
+                            data: new Date(data.comprovante.data_criacao).toLocaleString('pt-BR'),
+                            cliente: data.comprovante.cliente_nome || '',
+                            cpf: data.comprovante.cliente_cpf || '',
+                            vendedor: data.comprovante.vendedor || 'Sistema',
+                            itens: data.comprovante.itens.map(item => ({
+                                descricao: item.descricao,
+                                quantidade: item.quantidade,
+                                preco: item.preco
+                            })),
+                            total: data.comprovante.total,
+                            subtotal: data.comprovante.subtotal,
+                            desconto_valor: data.comprovante.desconto_valor || 0,
+                            desconto_percentual: data.comprovante.desconto_percentual || 0,
+                            forma_pagamento: data.comprovante.forma_pagamento
+                        };
+                        
+                        if (typeof imprimirComprovante === 'function') {
+                            imprimirComprovante(janela, dadosImpressao);
+                        }
+                    }
+                });
+            
+            carrinho = [];
+            atualizarCarrinho();
+            limparCliente();
+            limparVendedor();
+            document.getElementById('descontoPercentual').value = 0;
+            document.querySelectorAll('.forma-pagamento').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            formaPagamentoSelecionada = '';
+            document.getElementById('trocoSection').style.display = 'none';
+            document.getElementById('buscaRapida').focus();
+            
+            // REDIRECIONAR para mostrar mensagem Flask
+            window.location.href = `/pdv?mensagem=venda_sucesso&id=${result.venda_id}`;
+            
+        } else {
+            alert('❌ Erro: ' + result.error);
+            window.location.href = '/pdv?mensagem=erro';
+        }
+        
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao finalizar venda');
+        window.location.href = '/pdv?mensagem=erro';
+    }
+}
+
+// ========== FUNÇÕES DE REIMPRESSÃO ==========
+function abrirModalBuscarVendas() {
+    modalBuscarVendas.show();
+    document.getElementById('buscaNumeroVenda').value = '';
+    document.getElementById('buscaDataVenda').value = '';
+    document.getElementById('btnLimparNumeroVenda').style.display = 'none';
+    document.getElementById('btnLimparDataVenda').style.display = 'none';
+    carregarTodasVendas();
+}
+
+async function carregarTodasVendas() {
+    const tbody = document.getElementById('resultadosVendas');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2 text-muted">Carregando vendas...</p>
+            </td>
+        </tr>
+    `;
+    
+    try {
+        const response = await fetch('/api/pdv/vendas');
+        const vendas = await response.json();
+        renderizarVendas(vendas);
+    } catch (error) {
+        console.error('Erro ao carregar vendas:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle display-6 mb-3"></i>
+                    <p>Erro ao carregar vendas</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+document.getElementById('buscaNumeroVenda').addEventListener('input', function(e) {
+    const valor = e.target.value.trim();
+    const btnLimpar = document.getElementById('btnLimparNumeroVenda');
+    
+    if (valor !== '') {
+        btnLimpar.style.display = 'block';
+    } else {
+        btnLimpar.style.display = 'none';
+    }
+});
+
+document.getElementById('buscaDataVenda').addEventListener('input', function(e) {
+    const valor = e.target.value;
+    const btnLimpar = document.getElementById('btnLimparDataVenda');
+    
+    if (valor !== '') {
+        btnLimpar.style.display = 'block';
+    } else {
+        btnLimpar.style.display = 'none';
+    }
+});
+
+let timeoutBuscaVendas;
+function buscarVendasAuto() {
+    clearTimeout(timeoutBuscaVendas);
+    timeoutBuscaVendas = setTimeout(() => {
+        buscarVendasComFiltros();
+    }, 500);
+}
+
+async function buscarVendasComFiltros() {
+    const numero = document.getElementById('buscaNumeroVenda').value.trim();
+    const data = document.getElementById('buscaDataVenda').value;
+    
+    let url = '/api/pdv/vendas?';
+    if (numero) {
+        url += `numero=${numero}`;
+    } else if (data) {
+        url += `data=${data}`;
+    } else {
+        carregarTodasVendas();
+        return;
+    }
+    
+    const tbody = document.getElementById('resultadosVendas');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Buscando...</span>
+                </div>
+                <p class="mt-2 text-muted">Buscando vendas...</p>
+            </td>
+        </tr>
+    `;
+    
+    try {
+        const response = await fetch(url);
+        const vendas = await response.json();
+        renderizarVendas(vendas);
+    } catch (error) {
+        console.error('Erro ao buscar vendas:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4 text-danger">
+                    <i class="bi bi-exclamation-triangle display-6 mb-3"></i>
+                    <p>Erro ao buscar vendas</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function renderizarVendas(vendas) {
+    const tbody = document.getElementById('resultadosVendas');
+    
+    if (!vendas || vendas.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bi bi-emoji-frown display-6 mb-3"></i>
+                    <p>Nenhuma venda encontrada</p>
+                </td>
+            </tr>
+        `;
+        
+        // Destruir DataTable se existir
+        if (tabelaVendas) {
+            tabelaVendas.destroy();
+            tabelaVendas = null;
+        }
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    vendas.forEach(venda => {
+        const data = new Date(venda.data_criacao);
+        const dataStr = data.toLocaleDateString('pt-BR') + ' ' + 
+                       data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>#${venda.id_formatado || venda.id}</strong></td>
+                <td>${dataStr}</td>
+                <td>${venda.cliente_nome || 'CONSUMIDOR'}</td>
+                <td>${formatarMoeda(venda.total)}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="reimprimirVenda(${venda.id})">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    // Destruir instância anterior se existir
+    if (tabelaVendas) {
+        tabelaVendas.destroy();
+        tabelaVendas = null;
+    }
+    
+    // Inicializar nova instância com tradução embutida e busca habilitada
+    setTimeout(() => {
+        tabelaVendas = $('#tabelaVendasModal').DataTable({
+            language: {
+                "sEmptyTable": "Nenhum registro encontrado",
+                "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                "sInfoPostFix": "",
+                "sInfoThousands": ".",
+                "sLengthMenu": "_MENU_ resultados por página",
+                "sLoadingRecords": "Carregando...",
+                "sProcessing": "Processando...",
+                "sZeroRecords": "Nenhum registro encontrado",
+                "sSearch": "Pesquisar:",
+                "oPaginate": {
+                    "sNext": "Próximo",
+                    "sPrevious": "Anterior",
+                    "sFirst": "Primeiro",
+                    "sLast": "Último"
+                },
+                "oAria": {
+                    "sSortAscending": ": Ordenar colunas de forma ascendente",
+                    "sSortDescending": ": Ordenar colunas de forma descendente"
+                }
+            },
+            pageLength: 10,
+            order: [[0, 'desc']],
+            searching: true,
+            info: true,
+            paging: true,
+            pagingType: 'simple_numbers'
+        });
+    }, 100);
+}
+
+function limparNumeroVenda() {
+    document.getElementById('buscaNumeroVenda').value = '';
+    document.getElementById('btnLimparNumeroVenda').style.display = 'none';
+    buscarVendasAuto();
+}
+
+function limparDataVenda() {
+    document.getElementById('buscaDataVenda').value = '';
+    document.getElementById('btnLimparDataVenda').style.display = 'none';
+    buscarVendasAuto();
+}
+
+async function reimprimirVenda(id) {
+    try {
+        await fetch(`/api/pdv/venda/${id}/reimprimir`, { method: 'POST' });
+        
+        fetch(`/api/pdv/venda/${id}/comprovante`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const janela = window.open('', 'Comprovante', 
+                        'width=900,height=600,top=100,left=100,scrollbars=yes'
+                    );
+                    
+                    if (!janela) {
+                        alert('Permita popups para ver o comprovante!');
+                        return;
+                    }
+                    
+                    const dadosImpressao = {
+                        venda_id: data.comprovante.id,
+                        data: new Date(data.comprovante.data_criacao).toLocaleString('pt-BR'),
+                        cliente: data.comprovante.cliente_nome || '',
+                        cpf: data.comprovante.cliente_cpf || '',
+                        vendedor: data.comprovante.vendedor || 'Sistema',
+                        itens: data.comprovante.itens.map(item => ({
+                            descricao: item.descricao,
+                            quantidade: item.quantidade,
+                            preco: item.preco
+                        })),
+                        total: data.comprovante.total,
+                        subtotal: data.comprovante.subtotal,
+                        desconto_valor: data.comprovante.desconto_valor || 0,
+                        desconto_percentual: data.comprovante.desconto_percentual || 0,
+                        forma_pagamento: data.comprovante.forma_pagamento
+                    };
+                    
+                    if (typeof imprimirComprovante === 'function') {
+                        imprimirComprovante(janela, dadosImpressao);
+                    }
+                }
+            });
+            
+    } catch (error) {
+        console.error('Erro ao reimprimir:', error);
+    }
+}
+
+// ========== ATALHOS DE TECLADO ==========
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F2') {
+        e.preventDefault();
+        const btn = document.getElementById('btnFinalizar');
+        if (!btn.disabled) finalizarVenda();
+    }
+    if (e.key === 'F3') {
+        e.preventDefault();
+        abrirModalBuscarVendas();
+    }
+    if (e.key === 'F5') {
+        e.preventDefault();
+        document.getElementById('buscaRapida').focus();
+    }
+    if (e.key === 'Escape') {
+        const busca = document.getElementById('buscaRapida');
+        if (busca === document.activeElement) limparBusca();
+    }
+});
+
+// ========== INICIALIZAÇÃO ==========
+document.addEventListener('DOMContentLoaded', function() {
+    modalQuantidade = new bootstrap.Modal(document.getElementById('modalQuantidade'));
+    modalBuscarCliente = new bootstrap.Modal(document.getElementById('modalBuscarCliente'));
+    modalBuscarVendas = new bootstrap.Modal(document.getElementById('modalBuscarVendas'));
+    
+    document.getElementById('descontoPercentual').addEventListener('input', calcularTotais);
+    document.getElementById('valorRecebido').addEventListener('input', calcularTroco);
+    
+    atualizarCarrinho();
+    document.getElementById('buscaRapida').focus();
+});
+</script>
+
+<style>
+.border-hover {
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+}
+.border-hover:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+    transform: translateY(-2px);
+}
+.forma-pagamento.active {
+    background-color: #0d6efd !important;
+    color: white !important;
+    border-color: #0d6efd !important;
+}
+.table td {
+    vertical-align: middle;
+}
+#tabelaCarrinho input[type="number"] {
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    appearance: none;
+}
+#tabelaCarrinho input[type="number"]::-webkit-outer-spin-button,
+#tabelaCarrinho input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.card {
+    border-radius: 8px;
+}
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    transition: background-color 0.3s;
+}
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+kbd {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    color: #212529;
+    display: inline-block;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875em;
+    line-height: 1.5;
+    padding: 0.2em 0.4em;
+    white-space: nowrap;
+}
+img {
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    transition: transform 0.2s;
+}
+img:hover {
+    transform: scale(2);
+    z-index: 9999;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    cursor: pointer;
+    position: relative;
+}
+#produtoImagemModal {
+    max-height: 120px;
+    width: auto;
+    margin: 0 auto;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 5px;
+    background-color: #f8f9fa;
+}
+/* Estilos para DataTables nos modais */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    font-size: 0.875rem;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.125rem;
+}
+
+/* Ajustes de espaçamento para imagens */
+.d-flex.align-items-center {
+    gap: 12px;
+}
+
+.d-flex.align-items-center img {
+    margin-left: 5px;
+}
+
+.d-flex.align-items-center div {
+    margin-left: 5px;
+}
+
+/* Ajuste para o card do carrinho */
+#tabelaCarrinho td .d-flex.align-items-center {
+    gap: 12px;
+}
+
+@media (max-width: 992px) {
+    .col-lg-8,
+    .col-lg-4 {
+        width: 100%;
+    }
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,346 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Backups do Sistema{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-database"></i> Backups do Sistema
+{% endblock %}
+
+{% block page_actions %}
+{% if session.get('usuario_admin') or session.get('backup_criar') %}
+<button onclick="criarBackup()" class="btn btn-success">
+  <i class="bi bi-plus-circle"></i> Novo Backup
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header bg-white">
+    <h5 class="mb-0">
+      <i class="bi bi-files"></i> Backups Disponíveis
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if backups %}
+    <div class="table-responsive">
+      <table class="table table-hover datatable" style="width:100%; table-layout:fixed;">
+        <colgroup>
+          <col style="width: 5%;">    <!-- # -->
+          <col style="width: 35%;">    <!-- Arquivo -->
+          <col style="width: 15%;">    <!-- Data/Hora -->
+          <col style="width: 10%;">    <!-- Tamanho -->
+          <col style="width: 10%;">    <!-- Idade -->
+          <col style="width: 25%;">    <!-- Ações -->
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Arquivo</th>
+            <th>Data/Hora</th>
+            <th>Tamanho</th>
+            <th>Idade</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for backup in backups %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td class="text-truncate">
+              <i class="bi bi-file-earmark-zip text-primary me-2"></i>
+              <span title="{{ backup.nome }}">{{ backup.nome }}</span>
+            </td>
+            <td>{{ backup.data_formatada }}</td>
+            <td>{{ backup.tamanho_formatado }}</td>
+            <td>
+              {% if backup.dias == 0 %}
+                <span class="badge bg-success">Hoje</span>
+              {% elif backup.dias == 1 %}
+                <span class="badge bg-info">Ontem</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ backup.dias }} dias</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                {% if session.get('usuario_admin') or session.get('backup_baixar') %}
+                <a href="{{ url_for('baixar_backup', nome_arquivo=backup.nome) }}" 
+                   class="btn btn-sm btn-outline-primary" title="Baixar">
+                  <i class="bi bi-download"></i>
+                </a>
+                {% endif %}
+                
+                {% if session.get('usuario_admin') or session.get('backup_restaurar') %}
+                <button type="button" 
+                        class="btn btn-sm btn-outline-warning" 
+                        onclick="restaurarBackup('{{ backup.nome }}')"
+                        title="Restaurar">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+                {% endif %}
+                
+                {% if session.get('usuario_admin') or session.get('backup_excluir') %}
+                <button type="button" 
+                        class="btn btn-sm btn-outline-danger" 
+                        onclick="excluirBackup('{{ backup.nome }}')"
+                        title="Excluir">
+                  <i class="bi bi-trash"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-database-slash" style="font-size: 4rem; color: #ccc;"></i>
+      <h4 class="mt-3">Nenhum backup encontrado</h4>
+      <p class="text-muted">Clique em "Novo Backup" para criar seu primeiro backup</p>
+      {% if session.get('usuario_admin') or session.get('backup_criar') %}
+      <button onclick="criarBackup()" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Criar Primeiro Backup
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função para criar backup (POST /backup/novo)
+function criarBackup() {
+  if (!confirm('Deseja criar um novo backup do sistema?')) return;
+  
+  fetch('/backup/novo', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      // Criar mensagem de erro visual
+      mostrarMensagem('danger', '❌ Erro: ' + data.error);
+    }
+  })
+  .catch(error => {
+    mostrarMensagem('danger', '❌ Erro ao criar backup: ' + error);
+  });
+}
+
+// Função para restaurar backup (POST /backup/restaurar)
+function restaurarBackup(nome) {
+  if (!confirm(`⚠️ ATENÇÃO! Restaurar o backup ${nome} irá SUBSTITUIR todo o banco de dados atual. Deseja continuar?`)) return;
+  
+  fetch('/backup/restaurar', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ arquivo: nome })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href = '/login';
+    } else {
+      mostrarMensagem('danger', '❌ Erro: ' + data.error);
+    }
+  })
+  .catch(error => {
+    mostrarMensagem('danger', '❌ Erro ao restaurar backup: ' + error);
+  });
+}
+
+// Função para excluir backup (POST /backup/excluir)
+function excluirBackup(nome) {
+  if (!confirm(`Tem certeza que deseja excluir o backup ${nome}?`)) return;
+  
+  fetch('/backup/excluir', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ arquivo: nome })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      mostrarMensagem('danger', '❌ Erro: ' + data.error);
+    }
+  })
+  .catch(error => {
+    mostrarMensagem('danger', '❌ Erro ao excluir backup: ' + error);
+  });
+}
+
+// Função para mostrar mensagens estilo flash
+function mostrarMensagem(tipo, texto) {
+  // Verificar se já existe um container de mensagens
+  let container = document.querySelector('.flash-messages');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'flash-messages';
+    container.style.position = 'fixed';
+    container.style.top = '20px';
+    container.style.right = '20px';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+  }
+  
+  // Criar mensagem
+  const msg = document.createElement('div');
+  msg.className = `alert alert-${tipo} alert-dismissible fade show`;
+  msg.role = 'alert';
+  msg.innerHTML = `
+    ${texto}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+  
+  // Adicionar ao container
+  container.appendChild(msg);
+  
+  // Remover após 5 segundos
+  setTimeout(() => {
+    msg.classList.remove('show');
+    setTimeout(() => msg.remove(), 300);
+  }, 5000);
+}
+
+// Inicializar DataTable
+$(document).ready(function() {
+  if ($.fn.dataTable.isDataTable('.datatable')) {
+    $('.datatable').DataTable().destroy();
+  }
+  
+  $('.datatable').DataTable({
+    language: {
+      url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json"
+    },
+    pageLength: 10,
+    order: [[2, 'desc']],
+    columnDefs: [
+      { orderable: false, targets: 5 }
+    ],
+    scrollX: false,
+    autoWidth: false
+  });
+});
+</script>
+
+<style>
+/* Estilo para botões com espaçamento igual aos outros templates */
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+/* Estilo para os botões de ação - IGUAL AO SEU SISTEMA */
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+}
+.btn-outline-warning:hover {
+    color: #000;
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+}
+.btn-success:hover {
+    color: #fff;
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+/* Garantir que a tabela não tenha barra de rolagem */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Quebrar texto longo do nome do arquivo */
+.text-truncate {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Estilo para mensagens flash flutuantes */
+.flash-messages {
+    max-width: 400px;
+}
+
+.flash-messages .alert {
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Ajustes para mobile */
+@media (max-width: 768px) {
+    .table {
+        font-size: 0.85rem;
+    }
+    .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    .flash-messages {
+        max-width: 300px;
+        top: 10px;
+        right: 10px;
+    }
+}
+</style>
+{% endblock %}

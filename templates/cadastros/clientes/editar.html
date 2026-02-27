@@ -1,0 +1,616 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Editar Cliente - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-person-gear me-2"></i>Editar Cliente: {{ cliente.nome }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('listar_clientes') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Editar Cliente: {{ cliente.nome }}
+                </h5>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('editar_cliente', id=cliente.id) }}" id="formCliente">
+                    <!-- Abas -->
+                    <ul class="nav nav-tabs mb-4" id="clienteTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#dados" type="button" role="tab">
+                                <i class="bi bi-person me-1"></i> Dados Pessoais
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="contato-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#contato" type="button" role="tab">
+                                <i class="bi bi-telephone me-1"></i> Contato
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="endereco-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#endereco" type="button" role="tab">
+                                <i class="bi bi-geo-alt me-1"></i> Endereço
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="observacoes-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#observacoes" type="button" role="tab">
+                                <i class="bi bi-chat-text me-1"></i> Observações
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="clienteTabsContent">
+                        <!-- Dados Pessoais -->
+                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        Nome Completo *
+                                    </label>
+                                    <input type="text" class="form-control" 
+                                           name="nome" value="{{ cliente.nome }}" required autofocus>
+                                    <small class="text-muted">Nome completo do cliente ou razão social</small>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-card-heading me-1"></i>
+                                        Tipo de Pessoa
+                                    </label>
+                                    <select class="form-select" name="tipo" id="tipoPessoa">
+                                        <option value="FISICA" {% if cliente.tipo == 'FISICA' %}selected{% endif %}>
+                                            Pessoa Física
+                                        </option>
+                                        <option value="JURIDICA" {% if cliente.tipo == 'JURIDICA' %}selected{% endif %}>
+                                            Pessoa Jurídica
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label" id="docLabel">
+                                        <i class="bi bi-credit-card me-1"></i>
+                                        {% if cliente.tipo == 'FISICA' %}CPF *{% else %}CNPJ *{% endif %}
+                                    </label>
+                                    <input type="text" class="form-control" 
+                                           name="cpf_cnpj" id="cpf_cnpj" 
+                                           value="{% if cliente.tipo == 'FISICA' %}{{ cliente.cpf_cnpj[:3] }}.{{ cliente.cpf_cnpj[3:6] }}.{{ cliente.cpf_cnpj[6:9] }}-{{ cliente.cpf_cnpj[9:] }}{% else %}{{ cliente.cpf_cnpj[:2] }}.{{ cliente.cpf_cnpj[2:5] }}.{{ cliente.cpf_cnpj[5:8] }}/{{ cliente.cpf_cnpj[8:12] }}-{{ cliente.cpf_cnpj[12:] }}{% endif %}"
+                                           placeholder="{% if cliente.tipo == 'FISICA' %}000.000.000-00{% else %}00.000.000/0000-00{% endif %}" required>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-file-text me-1"></i>
+                                        RG
+                                    </label>
+                                    <input type="text" class="form-control" name="rg" 
+                                           value="{{ cliente.rg or '' }}" placeholder="MG-00.000.000">
+                                </div>
+                                
+                                <div class="col-12 mt-4">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Os campos marcados com * são obrigatórios
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contato -->
+                        <div class="tab-pane fade" id="contato" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        E-mail
+                                    </label>
+                                    <input type="email" class="form-control" name="email" 
+                                           value="{{ cliente.email or '' }}" placeholder="cliente@email.com">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        Telefone
+                                    </label>
+                                    <input type="tel" class="form-control" name="telefone" id="telefone"
+                                           value="{% if cliente.telefone %}{{ cliente.telefone[:2] }} {{ cliente.telefone[2:6] }}-{{ cliente.telefone[6:] }}{% endif %}">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-phone me-1"></i>
+                                        Celular *
+                                    </label>
+                                    <input type="tel" class="form-control" name="celular" id="celular"
+                                           value="{% if cliente.celular %}{{ cliente.celular[:2] }} {{ cliente.celular[2:7] }}-{{ cliente.celular[7:] }}{% endif %}" required>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label d-block">
+                                        &nbsp;
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="whatsapp" id="whatsapp" {% if cliente.whatsapp %}checked{% endif %}>
+                                        <label class="form-check-label" for="whatsapp">
+                                            <i class="bi bi-whatsapp text-success me-1"></i>
+                                            Possui WhatsApp
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="text-info">
+                                                <i class="bi bi-megaphone me-2"></i>
+                                                Comunicação
+                                            </h6>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="receber_email"
+                                                       {% if cliente.receber_email %}checked{% endif %}>
+                                                <label class="form-check-label">
+                                                    Aceita receber e-mails promocionais
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="receber_sms"
+                                                       {% if cliente.receber_sms %}checked{% endif %}>
+                                                <label class="form-check-label">
+                                                    Aceita receber SMS promocionais
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Endereço - ORGANIZADO IGUAL FORNECEDORES -->
+                        <div class="tab-pane fade" id="endereco" role="tabpanel">
+                            <div class="row g-3">
+                                <!-- Primeira linha: CEP, Logradouro e Número -->
+                                <div class="col-md-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-mailbox me-1"></i>
+                                        CEP
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="cep" id="cep"
+                                               value="{% if cliente.cep %}{{ cliente.cep[:5] }}-{{ cliente.cep[5:] }}{% endif %}"
+                                               placeholder="00000-000">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                onclick="buscarCEP()" id="btnBuscarCep">
+                                            <i class="bi bi-search me-1"></i> Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">
+                                        <i class="bi bi-signpost me-1"></i>
+                                        Logradouro
+                                    </label>
+                                    <input type="text" class="form-control" name="logradouro" id="logradouro"
+                                           value="{{ cliente.logradouro or '' }}" placeholder="Rua, Avenida, etc.">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">
+                                        <i class="bi bi-123 me-1"></i>
+                                        Número
+                                    </label>
+                                    <input type="text" class="form-control" name="numero" id="numero"
+                                           value="{{ cliente.numero or '' }}" placeholder="S/N">
+                                </div>
+                                
+                                <!-- Segunda linha: Bairro, Complemento, Cidade e UF -->
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-building me-1"></i>
+                                        Bairro
+                                    </label>
+                                    <input type="text" class="form-control" name="bairro" id="bairro"
+                                           value="{{ cliente.bairro or '' }}">
+                                </div>
+                                <div class="col-md-3" style="width: 25%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-plus-circle me-1"></i>
+                                        Complemento
+                                    </label>
+                                    <input type="text" class="form-control" name="complemento" id="complemento"
+                                           value="{{ cliente.complemento or '' }}" placeholder="Apto, Sala, etc.">
+                                </div>
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">
+                                        <i class="bi bi-geo me-1"></i>
+                                        Cidade
+                                    </label>
+                                    <input type="text" class="form-control" name="cidade" id="cidade"
+                                           value="{{ cliente.cidade or '' }}">
+                                </div>
+                                <div class="col-md-1" style="width: 10%; position: relative;">
+                                    <label class="form-label">
+                                        <i class="bi bi-map me-1"></i>
+                                        UF
+                                    </label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: white; border: 1px solid #ced4da; padding: 0.375rem 0.75rem;">
+                                            <span id="uf-selected">{% if cliente.estado %}{{ cliente.estado }}{% else %}--{% endif %}</span> <span class="float-end">▼</span>
+                                        </button>
+                                        <ul class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;">
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF(''); return false;">--</a></li>
+                                            {% for uf in ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] %}
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF('{{ uf }}'); return false;" {% if cliente.estado == uf %}style="background-color: #e9ecef;"{% endif %}>{{ uf }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <input type="hidden" name="estado" id="estado-hidden" value="{{ cliente.estado or '' }}">
+                                </div>
+                            </div>
+
+                            <!-- Loading (escondido inicialmente) -->
+                            <div class="row mt-2">
+                                <div class="col-12" id="cepLoading" style="display: none;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                        <span>Buscando endereço...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botão para limpar endereço -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparEndereco()">
+                                        <i class="bi bi-eraser me-1"></i> Limpar endereço
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Observações -->
+                        <div class="tab-pane fade" id="observacoes" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="form-label">
+                                        <i class="bi bi-chat-left-text me-1"></i>
+                                        Observações
+                                    </label>
+                                    <textarea class="form-control" name="observacoes" rows="6" 
+                                              placeholder="Anotações importantes sobre o cliente...">{{ cliente.observacoes or '' }}</textarea>
+                                </div>
+                                
+                                <div class="col-12 mt-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6>
+                                                <i class="bi bi-shield-check text-success me-2"></i>
+                                                Status do Cliente
+                                            </h6>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="ativo" id="ativo" {% if cliente.ativo %}checked{% endif %}>
+                                                <label class="form-check-label" for="ativo">
+                                                    Cliente Ativo
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">
+                                                Desative esta opção para marcar o cliente como inativo no sistema
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-secondary" onclick="voltarTab()">
+                            <i class="bi bi-arrow-left me-1"></i> Anterior
+                        </button>
+                        
+                        <div>
+                            <a href="{{ url_for('listar_clientes') }}" class="btn btn-outline-secondary me-2">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-warning" id="btnSubmit">
+                                <i class="bi bi-check-circle me-1"></i> Atualizar Cliente
+                            </button>
+                        </div>
+                        
+                        <button type="button" class="btn btn-secondary" onclick="avancarTab()">
+                            Próximo <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS com ajustes responsivos -->
+<style>
+@media (min-width: 768px) {
+    .col-md-1 {
+        flex: 0 0 auto;
+        width: 10%;
+    }
+    .col-md-4 {
+        flex: 0 0 auto;
+        width: 32%;
+    }
+    .col-md-3 {
+        flex: 0 0 auto;
+        width: 25%;
+    }
+}
+
+/* Ajuste para o dropdown */
+.dropdown-menu {
+    min-width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* BOTÃO UF - SEM NENHUM EFEITO (CURSOR PADRÃO) */
+button[data-bs-toggle="dropdown"] {
+    cursor: default;
+    background-color: white;
+    color: #212529;
+}
+
+button[data-bs-toggle="dropdown"]:hover,
+button[data-bs-toggle="dropdown"]:focus,
+button[data-bs-toggle="dropdown"]:active {
+    background-color: white;
+    color: #212529;
+    border-color: #ced4da;
+    box-shadow: none;
+    outline: none;
+}
+
+/* LISTA - CURSOR PADRÃO E HOVER DESTACADO */
+.dropdown-item {
+    background-color: white;
+    color: #212529;
+    cursor: default;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #e9ecef !important;
+    color: #212529;
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.2em;
+}
+
+/* Estilo para botão de warning */
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #000;
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+// Função para selecionar UF
+function selectUF(valor) {
+    document.getElementById('uf-selected').textContent = valor || '--';
+    document.getElementById('estado-hidden').value = valor;
+}
+
+// Máscaras para os campos
+document.addEventListener('DOMContentLoaded', function() {
+    // Máscara para CPF/CNPJ baseado no tipo atual
+    const tipoAtual = "{{ cliente.tipo }}";
+    const maskPattern = tipoAtual === 'JURIDICA' ? '00.000.000/0000-00' : '000.000.000-00';
+    
+    const cpfMask = IMask(document.getElementById('cpf_cnpj'), {
+        mask: maskPattern
+    });
+    
+    // Máscara para telefone
+    IMask(document.getElementById('telefone'), {
+        mask: '(00) 0000-0000'
+    });
+    
+    IMask(document.getElementById('celular'), {
+        mask: '(00) 00000-0000'
+    });
+    
+    // Máscara para CEP
+    IMask(document.getElementById('cep'), {
+        mask: '00000-000'
+    });
+    
+    // Alternar entre CPF e CNPJ
+    document.getElementById('tipoPessoa').addEventListener('change', function() {
+        const label = document.getElementById('docLabel');
+        const input = document.getElementById('cpf_cnpj');
+        
+        if (this.value === 'JURIDICA') {
+            label.innerHTML = '<i class="bi bi-credit-card me-1"></i>CNPJ *';
+            input.placeholder = '00.000.000/0000-00';
+            cpfMask.updateOptions({
+                mask: '00.000.000/0000-00'
+            });
+        } else {
+            label.innerHTML = '<i class="bi bi-credit-card me-1"></i>CPF *';
+            input.placeholder = '000.000.000-00';
+            cpfMask.updateOptions({
+                mask: '000.000.000-00'
+            });
+        }
+    });
+    
+    // VALIDAÇÃO SIMPLES APENAS PARA O FORMULÁRIO
+    document.getElementById('formCliente').addEventListener('submit', function(e) {
+        // Validar CPF/CNPJ
+        const tipoPessoa = document.getElementById('tipoPessoa').value;
+        const docInput = document.getElementById('cpf_cnpj');
+        const docValue = docInput.value.replace(/\D/g, '');
+        
+        if (tipoPessoa === 'FISICA') {
+            if (docValue.length !== 11) {
+                e.preventDefault();
+                alert('❌ CPF inválido. Deve conter 11 dígitos.');
+                docInput.focus();
+                return false;
+            }
+        } else {
+            if (docValue.length !== 14) {
+                e.preventDefault();
+                alert('❌ CNPJ inválido. Deve conter 14 dígitos.');
+                docInput.focus();
+                return false;
+            }
+        }
+        
+        // Validar celular
+        const celularInput = document.getElementById('celular');
+        const celularValue = celularInput.value.replace(/\D/g, '');
+        if (celularValue.length !== 11) {
+            e.preventDefault();
+            alert('❌ Celular inválido. Deve conter 11 dígitos (com DDD).');
+            celularInput.focus();
+            return false;
+        }
+        
+        // Mostrar loading no botão
+        const submitBtn = document.getElementById('btnSubmit');
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Atualizando...';
+        submitBtn.disabled = true;
+        
+        return true;
+    });
+});
+
+// Navegação entre abas
+let currentTab = 0;
+const tabs = document.querySelectorAll('#clienteTabs .nav-link');
+
+function showTab(n) {
+    tabs[n].click();
+    currentTab = n;
+}
+
+function avancarTab() {
+    if (currentTab < tabs.length - 1) {
+        showTab(currentTab + 1);
+    }
+}
+
+function voltarTab() {
+    if (currentTab > 0) {
+        showTab(currentTab - 1);
+    }
+}
+
+// FUNÇÃO PARA BUSCAR CEP - ATUALIZADA
+function buscarCEP() {
+    const cepInput = document.getElementById('cep');
+    const cep = cepInput.value.replace(/\D/g, '');
+    
+    if (cep.length !== 8) {
+        alert('❌ Digite um CEP válido com 8 números!');
+        cepInput.focus();
+        return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('cepLoading').style.display = 'block';
+    document.getElementById('btnBuscarCep').disabled = true;
+    
+    // Buscar na API ViaCEP
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            // Esconder loading
+            document.getElementById('cepLoading').style.display = 'none';
+            document.getElementById('btnBuscarCep').disabled = false;
+            
+            if (data.erro) {
+                alert('❌ CEP não encontrado!');
+                return;
+            }
+            
+            // Preencher os campos automaticamente
+            document.getElementById('logradouro').value = data.logradouro || '';
+            document.getElementById('bairro').value = data.bairro || '';
+            document.getElementById('cidade').value = data.localidade || '';
+            
+            // Atualizar o dropdown com a UF retornada
+            if (data.uf) {
+                selectUF(data.uf);
+            }
+            
+            document.getElementById('numero').focus();
+            
+            // Mensagem de sucesso
+            alert('✅ Endereço encontrado e preenchido automaticamente!');
+        })
+        .catch(error => {
+            // Esconder loading
+            document.getElementById('cepLoading').style.display = 'none';
+            document.getElementById('btnBuscarCep').disabled = false;
+            
+            console.error('Erro:', error);
+            alert('❌ Erro ao buscar o CEP. Tente novamente.');
+        });
+}
+
+// Função para limpar endereço
+function limparEndereco() {
+    document.getElementById('logradouro').value = '';
+    document.getElementById('numero').value = '';
+    document.getElementById('complemento').value = '';
+    document.getElementById('bairro').value = '';
+    document.getElementById('cidade').value = '';
+    selectUF('');
+    document.getElementById('cep').focus();
+}
+
+// Permitir buscar CEP ao pressionar Enter no campo CEP
+document.getElementById('cep').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        buscarCEP();
+    }
+});
+</script>
+{% endblock %}

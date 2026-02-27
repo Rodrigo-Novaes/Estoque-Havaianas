@@ -1,0 +1,763 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Dashboard - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-speedometer2 me-2"></i>Dashboard
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="atualizarDashboard()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="gerarRelatorioDiario()">
+        <i class="bi bi-file-text me-1"></i> Relatório
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Linha 1: Cards de Resumo -->
+<div class="row g-4 mb-4">
+    <!-- Total de Produtos -->
+    <div class="col-xl-3 col-lg-6">
+        <div class="card card-stat border-start border-primary border-4 h-100 hover-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-primary text-uppercase mb-2">Produtos Ativos</h6>
+                        <h2 class="mb-0 display-6 fw-bold">{{ total_produtos }}</h2>
+                        <p class="text-muted mb-0">Cadastrados no sistema</p>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-box-seam text-primary fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 75%"></div>
+                    </div>
+                    <small class="text-muted">{{ total_grades }} grades disponíveis</small>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 pt-0">
+                <a href="{{ url_for('produtos') }}" class="stretched-link text-decoration-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-primary">Ver todos</span>
+                        <i class="bi bi-arrow-right-short text-primary"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total em Estoque -->
+    <div class="col-xl-3 col-lg-6">
+        <div class="card card-stat border-start border-success border-4 h-100 hover-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-success text-uppercase mb-2">Estoque Total</h6>
+                        <h2 class="mb-0 display-6 fw-bold">{{ total_estoque }}</h2>
+                        <p class="text-muted mb-0">Unidades disponíveis</p>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-archive text-success fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up me-1"></i> Disponível
+                        </small>
+                        <small class="text-muted">Valor: R$ 
+                            {% set valor_estoque = total_estoque * 15 %}
+                            {% if valor_estoque %}
+                                {{ "{:,.2f}".format(valor_estoque).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                            {% else %}
+                                0,00
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 pt-0">
+                <a href="{{ url_for('estoque') }}" class="stretched-link text-decoration-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-success">Consultar estoque</span>
+                        <i class="bi bi-arrow-right-short text-success"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estoque Baixo -->
+    <div class="col-xl-3 col-lg-6">
+        <div class="card card-stat border-start border-warning border-4 h-100 hover-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-warning text-uppercase mb-2">Estoque Baixo</h6>
+                        <h2 class="mb-0 display-6 fw-bold">{{ estoque_baixo }}</h2>
+                        <p class="text-muted mb-0">Itens críticos</p>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-exclamation-triangle text-warning fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="alert alert-warning py-1 mb-0" role="alert">
+                        <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Necessita atenção imediata
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 pt-0">
+                <a href="{{ url_for('relatorio_estoque_baixo') }}" class="stretched-link text-decoration-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-warning">Ver alertas</span>
+                        <i class="bi bi-arrow-right-short text-warning"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendas Hoje -->
+    <div class="col-xl-3 col-lg-6">
+        <div class="card card-stat border-start border-info border-4 h-100 hover-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-info text-uppercase mb-2">Vendas Hoje</h6>
+                        <h2 class="mb-0 display-6 fw-bold">{{ vendas_hoje }}</h2>
+                        <p class="text-muted mb-0">Transações do dia</p>
+                    </div>
+                    <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-cart-check text-info fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-info">Dia {{ now().strftime('%d/%m') if now else '' }}</span>
+                        <small class="text-muted">
+                            <i class="bi bi-clock-history me-1"></i> Última: {{ ultima_venda_hora }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 pt-0">
+                <a href="{{ url_for('pdv') }}" class="stretched-link text-decoration-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-info">Nova venda</span>
+                        <i class="bi bi-arrow-right-short text-info"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Linha 2: Gráficos e Ações Rápidas -->
+<div class="row g-4 mb-4">
+    <!-- Ações Rápidas -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-charge text-warning me-2"></i>
+                    Ações Rápidas
+                </h5>
+                <span class="badge bg-primary">4 opções</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <a href="{{ url_for('pdv') }}" class="btn btn-success w-100 py-3 mb-2 action-btn">
+                            <div class="d-flex align-items-center">
+                                <div class="action-icon">
+                                    <i class="bi bi-cash-coin fa-2x"></i>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <div class="fw-bold">Nova Venda</div>
+                                    <small class="d-block">Abrir PDV de vendas</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a href="{{ url_for('entrada_estoque') }}" class="btn btn-primary w-100 py-3 mb-2 action-btn">
+                            <div class="d-flex align-items-center">
+                                <div class="action-icon">
+                                    <i class="bi bi-arrow-down-circle fa-2x"></i>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <div class="fw-bold">Entrada de Estoque</div>
+                                    <small class="d-block">Registrar compra/fornecedor</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a href="{{ url_for('novo_produto') }}" class="btn btn-info w-100 py-3 mb-2 action-btn">
+                            <div class="d-flex align-items-center">
+                                <div class="action-icon">
+                                    <i class="bi bi-plus-circle fa-2x"></i>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <div class="fw-bold">Novo Produto</div>
+                                    <small class="d-block">Cadastrar Havaianas</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-12">
+                        <a href="{{ url_for('relatorio_estoque_baixo') }}" class="btn btn-warning w-100 py-3 mb-2 action-btn">
+                            <div class="d-flex align-items-center">
+                                <div class="action-icon">
+                                    <i class="bi bi-exclamation-triangle fa-2x"></i>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <div class="fw-bold">Estoque Crítico</div>
+                                    <small class="d-block">{{ estoque_baixo }} itens precisam de atenção</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Estoque (COM DADOS REAIS) -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart-line text-primary me-2"></i>
+                    Visão Geral do Estoque
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" data-period="dia">Dia</button>
+                    <button class="btn btn-outline-secondary" data-period="semana">Semana</button>
+                    <button class="btn btn-outline-secondary" data-period="mes">Mês</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Gráfico com Dados Reais -->
+                <div class="chart-container" style="position: relative; height: 250px;">
+                    <canvas id="estoqueChart"></canvas>
+                </div>
+                
+                <!-- Legenda -->
+                <div class="row mt-4">
+                    <div class="col-4 text-center">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="color-indicator bg-success me-2"></div>
+                            <div>
+                                <div class="fw-bold">{{ total_estoque - estoque_baixo - estoque_zero }}</div>
+                                <small class="text-muted">Normal</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="color-indicator bg-warning me-2"></div>
+                            <div>
+                                <div class="fw-bold">{{ estoque_baixo }}</div>
+                                <small class="text-muted">Baixo</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="color-indicator bg-danger me-2"></div>
+                            <div>
+                                <div class="fw-bold">{{ estoque_zero }}</div>
+                                <small class="text-muted">Crítico</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Linha 3: Últimas Movimentações e Top Produtos -->
+<div class="row g-4">
+    <!-- Últimas Movimentações -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history text-info me-2"></i>
+                    Últimas Movimentações
+                </h5>
+                <span class="badge bg-info">{{ ultimas_mov|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="20%">Tipo</th>
+                                <th width="40%">Produto</th>
+                                <th width="20%">Quantidade</th>
+                                <th width="20%">Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mov in ultimas_mov[:8] %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if mov.tipo == 'ENTRADA' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ mov.tipo }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if mov.grade and mov.grade.produto %}
+                                        <div class="color-indicator me-2" 
+                                             style="background-color: {{ cor_para_hex(mov.grade.cor) if cor_para_hex else '#ccc' }}"></div>
+                                        <div>
+                                            <div class="fw-medium">{{ mov.grade.produto.descricao[:25] }}{% if mov.grade.produto.descricao|length > 25 %}...{% endif %}</div>
+                                            <small class="text-muted">{{ mov.grade.cor }} T{{ mov.grade.tamanho }}</small>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">Produto não encontrado</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold {% if mov.tipo == 'ENTRADA' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if mov.tipo == 'ENTRADA' %}+{% else %}-{% endif %}{{ mov.quantidade }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ mov.data.strftime('%H:%M') if mov.data else '--:--' }}</small>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <i class="bi bi-inbox text-muted fa-2x mb-2"></i>
+                                    <p class="text-muted mb-0">Nenhuma movimentação recente</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <a href="{{ url_for('relatorio_movimentacoes') }}" class="btn btn-sm btn-outline-primary w-100">
+                    Ver todas as movimentações
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produtos Mais Vendidos (COM DADOS REAIS) -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-trophy text-warning me-2"></i>
+                    Top 5 Produtos
+                </h5>
+                <span class="badge bg-warning">Últimos 7 dias</span>
+            </div>
+            <div class="card-body">
+                {% if top_produtos and top_produtos|length > 0 %}
+                <div class="list-group list-group-flush">
+                    {% for produto_data in top_produtos %}
+                    {% set produto = produto_data[0] %}
+                    {% set total_vendido = produto_data[1] or 0 %}
+                    {% set valor_total = produto_data[2] or 0 %}
+                    
+                    <div class="list-group-item border-0 px-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="position-relative me-3">
+                                    <span class="badge bg-dark rounded-circle d-flex align-items-center justify-content-center" 
+                                          style="width: 32px; height: 32px;">
+                                        {{ loop.index }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="fw-medium">{{ produto.descricao[:30] }}{% if produto.descricao|length > 30 %}...{% endif %}</div>
+                                    <small class="text-muted">
+                                        {{ produto.modelo or 'Sem modelo' }} • 
+                                        {{ produto.genero or '' }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-success">{{ total_vendido|int }} un</div>
+                                <small class="text-muted">R$ 
+                                    {# Formatar valor no padrão brasileiro #}
+                                    {% if valor_total %}
+                                        {{ "{:,.2f}".format(valor_total).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                    {% else %}
+                                        0,00
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            {% if top_produtos[0][1] and top_produtos[0][1] > 0 %}
+                                {% set percentual = (total_vendido / top_produtos[0][1] * 100) %}
+                            {% else %}
+                                {% set percentual = 0 %}
+                            {% endif %}
+                            <div class="progress-bar bg-success" style="width: {{ percentual|round(1) }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Mensagem quando não há vendas -->
+                <div class="text-center py-4">
+                    <i class="bi bi-info-circle text-muted fa-2x mb-2"></i>
+                    <p class="text-muted mb-0">Sem dados de vendas nos últimos 7 dias</p>
+                </div>
+                {% endif %}
+                
+                <!-- Dica do Sistema -->
+                <div class="alert alert-light border mt-3" role="alert">
+                    <div class="d-flex">
+                        <i class="bi bi-lightbulb text-warning me-3 fs-5"></i>
+                        <div>
+                            <small class="fw-bold">Dica do dia:</small>
+                            <p class="mb-0 small">Mantenha estoque mínimo de 10 unidades para os produtos mais vendidos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Linha 4: Status do Sistema -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <div class="status-indicator bg-success"></div>
+                            </div>
+                            <div>
+                                <small class="text-muted">Status do Sistema</small>
+                                <p class="mb-0 fw-medium">Sistema Havaianas Online • {{ total_produtos }} produtos • {{ total_estoque }} unidades</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <small class="text-muted">
+                            Última atualização: {{ now().strftime('%d/%m/%Y %H:%M:%S') if now else '' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Função para atualizar dashboard
+    function atualizarDashboard() {
+        const btn = event.target;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Atualizando...';
+        btn.disabled = true;
+        
+        // Simular atualização
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    }
+    
+    // Gerar relatório diário
+    function gerarRelatorioDiario() {
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        const relatorio = `
+        ================================
+        RELATÓRIO DIÁRIO - ${hoje}
+        ================================
+        📊 RESUMO DO DIA
+        • Vendas hoje: {{ vendas_hoje }}
+        • Estoque total: {{ total_estoque }} unidades
+        • Produtos ativos: {{ total_produtos }}
+        • Estoque baixo: {{ estoque_baixo }} itens
+        • Estoque crítico: {{ estoque_zero }} itens
+        
+        ⚠️ ALERTAS
+        {% if estoque_baixo > 0 %}
+        • {{ estoque_baixo }} itens precisam de reposição
+        {% else %}
+        • Nenhum alerta crítico
+        {% endif %}
+        
+        🏆 TOP PRODUTOS
+        {% if top_produtos and top_produtos|length > 0 %}
+        {% for produto_data in top_produtos[:3] %}
+        • {{ produto_data[0].descricao[:20] }}: {{ produto_data[1] or 0 }} un
+        {% endfor %}
+        {% else %}
+        • Sem vendas recentes
+        {% endif %}
+        
+        📈 PRÓXIMAS AÇÕES
+        1. Verificar estoque baixo
+        2. Planejar compras
+        3. Revisar vendas do dia
+        ================================
+        Sistema Havaianas - Dashboard
+        ================================
+        `;
+        
+        alert('Relatório gerado!\n\n' + relatorio);
+    }
+    
+    // Gráfico de estoque COM DADOS REAIS
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('estoqueChart').getContext('2d');
+        
+        // Dados REAIS do banco (passados do Python)
+        const modelos = {{ modelos|tojson|safe }};
+        const estoqueNormal = {{ estoque_normal|tojson|safe }};
+        const estoqueBaixo = {{ estoque_baixo_list|tojson|safe }};
+        const estoqueCritico = {{ estoque_critico|tojson|safe }};
+        
+        // Se não houver dados, mostra mensagem
+        if (modelos.length === 0) {
+            document.getElementById('estoqueChart').parentElement.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-bar-chart text-muted fa-3x mb-3"></i>
+                    <p class="text-muted">Sem dados de estoque por modelo</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Criar gráfico com dados REAIS
+        const estoqueChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: modelos,
+                datasets: [{
+                    label: 'Estoque Normal',
+                    data: estoqueNormal,
+                    backgroundColor: '#28a745',
+                    borderColor: '#28a745',
+                    borderWidth: 1
+                }, {
+                    label: 'Estoque Baixo',
+                    data: estoqueBaixo,
+                    backgroundColor: '#ffc107',
+                    borderColor: '#ffc107',
+                    borderWidth: 1
+                }, {
+                    label: 'Estoque Crítico',
+                    data: estoqueCritico,
+                    backgroundColor: '#dc3545',
+                    borderColor: '#dc3545',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y + ' unidades';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [2]
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' un';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Controle de período do gráfico
+        document.querySelectorAll('[data-period]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Ativar botão clicado
+                document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Aqui você implementaria a mudança de dados do gráfico
+                // baseado no período selecionado
+                console.log('Período selecionado:', this.dataset.period);
+                
+                // Para implementar no futuro:
+                // 1. Fazer requisição AJAX para buscar dados do período
+                // 2. Atualizar o gráfico com novos dados
+            });
+        });
+    });
+</script>
+
+<style>
+    /* Estilos para o Dashboard */
+    .hover-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+    
+    .action-btn {
+        transition: all 0.3s ease;
+        border-radius: 10px !important;
+    }
+    
+    .action-btn:hover {
+        transform: translateX(5px);
+    }
+    
+    .action-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+    }
+    
+    .color-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    /* Cards com gradiente sutil */
+    .card-stat {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    }
+    
+    /* Tabela com hover suave */
+    .table-hover tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 102, 204, 0.05);
+    }
+    
+    /* Badges redondos */
+    .badge.rounded-circle {
+        border-radius: 50% !important;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Progress bars personalizadas */
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .display-6 {
+            font-size: 2rem;
+        }
+        
+        .action-btn .d-flex {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .action-icon {
+            margin: 0 auto 10px;
+        }
+    }
+    
+    /* Animações */
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}

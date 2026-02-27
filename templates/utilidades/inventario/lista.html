@@ -1,0 +1,535 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Inventário - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-clipboard-data me-2"></i>Gerenciar Inventário
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('novo_inventario') }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> Nova Contagem
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button class="dropdown-item" onclick="exportarCSV()">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar CSV
+            </button>
+        </li>
+        <li>
+            <button class="dropdown-item" onclick="imprimirLista()">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total de Contagens</h6>
+                        <h2 class="mb-0">{{ total_contagens }}</h2>
+                    </div>
+                    <i class="bi bi-clipboard-data fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Em Andamento</h6>
+                        <h2 class="mb-0">{{ em_andamento }}</h2>
+                    </div>
+                    <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Finalizadas</h6>
+                        <h2 class="mb-0">{{ finalizadas }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Itens Ajustados</h6>
+                        <h2 class="mb-0">{{ total_ajustes }}</h2>
+                    </div>
+                    <i class="bi bi-arrow-left-right fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('inventario') }}" id="formFiltros">
+            <div class="row g-0">
+                <!-- Filtro de Status -->
+                <div class="col-md-4 pe-2">
+                    <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i>Status</label>
+                    <div class="input-group">
+                        <select class="form-select" name="status" id="status" onchange="this.form.submit()">
+                            <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+                            <option value="EM_ANDAMENTO" {% if status == 'EM_ANDAMENTO' %}selected{% endif %}>Em Andamento</option>
+                            <option value="FINALIZADO" {% if status == 'FINALIZADO' %}selected{% endif %}>Finalizado</option>
+                            <option value="CANCELADO" {% if status == 'CANCELADO' %}selected{% endif %}>Cancelado</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('status')" title="Limpar filtro" style="display: none;" id="limpar-status">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtro de Período Início -->
+                <div class="col-md-3 pe-2">
+                    <label class="form-label fw-bold"><i class="bi bi-calendar me-1"></i>Data Início</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="data_inicio" id="data_inicio" value="{{ data_inicio or '' }}" onchange="this.form.submit()">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('data_inicio')" title="Limpar data" style="display: none;" id="limpar-data_inicio">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtro de Período Fim -->
+                <div class="col-md-3 pe-2">
+                    <label class="form-label fw-bold"><i class="bi bi-calendar me-1"></i>Data Fim</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="data_fim" id="data_fim" value="{{ data_fim or '' }}" onchange="this.form.submit()">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('data_fim')" title="Limpar data" style="display: none;" id="limpar-data_fim">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Botão Limpar Todos -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('inventario') }}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-eraser me-1"></i> Limpar Todos
+                    </a>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Status atual dos filtros -->
+        <div class="mt-2 text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Mostrando: 
+            <strong>
+                {% if status == 'EM_ANDAMENTO' %}Em Andamento
+                {% elif status == 'FINALIZADO' %}Finalizado
+                {% elif status == 'CANCELADO' %}Cancelado
+                {% else %}Todos os status
+                {% endif %}
+            </strong>
+            {% if data_inicio and data_fim %}
+                - Período: {{ data_inicio[:10] }} até {{ data_fim[:10] }}
+            {% elif data_inicio %}
+                - A partir de: {{ data_inicio[:10] }}
+            {% elif data_fim %}
+                - Até: {{ data_fim[:10] }}
+            {% endif %}
+            <span class="badge bg-secondary ms-2">{{ inventarios|length }} resultado(s)</span>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Inventários - AGORA COM DATATABLES -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-table me-2"></i>Contagens de Inventário</h5>
+        <span class="badge bg-secondary">{{ inventarios|length }} registro(s)</span>
+    </div>
+    <div class="card-body p-0">
+        {% if inventarios %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0" id="tabelaInventario">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">ID</th>
+                        <th width="12%">Data Início</th>
+                        <th width="12%">Data Fim</th>
+                        <th width="10%">Tipo</th>
+                        <th width="10%">Status</th>
+                        <th width="5%">Itens</th>
+                        <th width="5%">Ajustes</th>
+                        <th width="15%">Responsável</th>
+                        <th width="15%">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in inventarios %}
+                    <tr>
+                        <!-- ID CORRIGIDO: #001 -->
+                        <td><span class="badge bg-dark">#{{ "%03d"|format(inv.id) }}</span></td>
+                        
+                        <td>
+                            <i class="bi bi-calendar-event me-1 text-primary"></i>
+                            {{ inv.data_inicio.strftime('%d/%m/%Y') if inv.data_inicio else '---' }}
+                            <br><small class="text-muted">{{ inv.data_inicio.strftime('%H:%M') if inv.data_inicio else '' }}</small>
+                        </td>
+                        <td>
+                            {% if inv.data_fim %}
+                                <i class="bi bi-calendar-check me-1 text-success"></i>
+                                {{ inv.data_fim.strftime('%d/%m/%Y') }}
+                                <br><small class="text-muted">{{ inv.data_fim.strftime('%H:%M') }}</small>
+                            {% else %}
+                                <span class="text-muted">---</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if inv.tipo == 'COMPLETO' %}
+                                <span class="badge bg-primary">Completo</span>
+                            {% elif inv.tipo == 'PARCIAL' %}
+                                <span class="badge bg-info">Parcial</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Ajuste</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if inv.status == 'EM_ANDAMENTO' %}
+                                <span class="badge bg-warning text-dark">Em Andamento</span>
+                            {% elif inv.status == 'FINALIZADO' %}
+                                <span class="badge bg-success">Finalizado</span>
+                            {% elif inv.status == 'CANCELADO' %}
+                                <span class="badge bg-secondary">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ inv.contagens|length }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% set ajustes = inv.contagens|selectattr('quantidade_ajuste', '!=', 0)|list %}
+                            {% if ajustes|length > 0 %}
+                                <span class="badge bg-warning">{{ ajustes|length }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2 {% if inv.status == 'FINALIZADO' %}bg-success{% elif inv.status == 'EM_ANDAMENTO' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    <span>{{ inv.usuario.nome[:1]|upper if inv.usuario and inv.usuario.nome else (inv.usuario.username[:1]|upper if inv.usuario else '?') }}</span>
+                                </div>
+                                <div>
+                                    <strong>{{ inv.usuario.nome if inv.usuario and inv.usuario.nome else (inv.usuario.username if inv.usuario else 'N/A') }}</strong>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <!-- Botão VER - Todos veem -->
+                                <a href="{{ url_for('ver_inventario', id=inv.id) }}" class="btn btn-sm btn-outline-info" title="Ver Detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                
+                                {% if inv.status == 'EM_ANDAMENTO' %}
+                                <!-- Botão CONTINUAR - Todos veem -->
+                                <a href="{{ url_for('continuar_inventario', id=inv.id) }}" class="btn btn-sm btn-outline-primary" title="Continuar">
+                                    <i class="bi bi-play-circle"></i>
+                                </a>
+                                
+                                <!-- Botão FINALIZAR - Todos veem -->
+                                <form method="POST" action="{{ url_for('finalizar_inventario', id=inv.id) }}" class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja finalizar o inventário #{{ "%03d"|format(inv.id) }}?\n\nOs ajustes serão aplicados ao estoque!');">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Finalizar">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                </form>
+                                
+                                <!-- Botão CANCELAR - Todos veem -->
+                                <form method="POST" action="{{ url_for('cancelar_inventario', id=inv.id) }}" class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja cancelar o inventário #{{ "%03d"|format(inv.id) }}?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                <!-- BOTÃO EXCLUIR - APENAS ADMINISTRADORES -->
+                                {% if session.get('usuario_admin', False) and inv.status in ['FINALIZADO', 'CANCELADO'] %}
+                                <form method="POST" action="{{ url_for('excluir_inventario', id=inv.id) }}" class="d-inline" 
+                                    onsubmit="return confirmarExclusaoAdmin('{{ inv.id }}', '{{ inv.status }}');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir permanentemente (Admin)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-data display-1 text-muted"></i>
+            <h4 class="mt-3">Nenhuma contagem encontrada</h4>
+            <p class="text-muted">
+                {% if status != 'todos' or data_inicio or data_fim %}
+                    Nenhum resultado para os filtros selecionados.<br>
+                    <a href="{{ url_for('inventario') }}" class="btn btn-link">Limpar filtros</a>
+                {% else %}
+                    Comece criando uma nova contagem de inventário.
+                {% endif %}
+            </p>
+            <a href="{{ url_for('novo_inventario') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Nova Contagem
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Adicionar DataTables CSS e JS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+// ============================================
+// FUNÇÕES PARA INVENTÁRIO
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable - IGUAL AOS OUTROS TEMPLATES
+    $('#tabelaInventario').DataTable({
+        language: {
+            url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json"
+        },
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        order: [[0, 'asc']],
+        responsive: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip'
+    });
+    
+    verificarBotoesLimpar();
+    
+    document.getElementById('status').addEventListener('change', function() {
+        verificarBotaoLimpar('status', this.value);
+    });
+    
+    document.getElementById('data_inicio').addEventListener('change', function() {
+        verificarBotaoLimpar('data_inicio', this.value);
+    });
+    
+    document.getElementById('data_fim').addEventListener('change', function() {
+        verificarBotaoLimpar('data_fim', this.value);
+    });
+});
+
+function verificarBotoesLimpar() {
+    verificarBotaoLimpar('status', document.getElementById('status')?.value || '');
+    verificarBotaoLimpar('data_inicio', document.getElementById('data_inicio')?.value || '');
+    verificarBotaoLimpar('data_fim', document.getElementById('data_fim')?.value || '');
+}
+
+function verificarBotaoLimpar(campoId, valor) {
+    const btnLimpar = document.getElementById(`limpar-${campoId}`);
+    if (btnLimpar) {
+        if (campoId === 'status') {
+            btnLimpar.style.display = (valor && valor !== 'todos') ? 'block' : 'none';
+        } else {
+            btnLimpar.style.display = (valor && valor !== '') ? 'block' : 'none';
+        }
+    }
+}
+
+function limparFiltroIndividual(campoId) {
+    const campo = document.getElementById(campoId);
+    if (campo) {
+        if (campoId === 'status') {
+            campo.value = 'todos';
+        } else {
+            campo.value = '';
+        }
+        campo.dispatchEvent(new Event('change'));
+        document.getElementById(`limpar-${campoId}`).style.display = 'none';
+        document.getElementById('formFiltros').submit();
+    }
+}
+
+// Função de confirmação para administradores
+function confirmarExclusaoAdmin(id, status) {
+    // Formatar ID com 3 dígitos (ex: 2 -> 002)
+    const idFormatado = id.toString().padStart(3, '0');
+    
+    let mensagem = `⚠️ ATENÇÃO ADMINISTRADOR ⚠️\n\n`;
+    mensagem += `Você está prestes a EXCLUIR PERMANENTEMENTE o inventário #${idFormatado}\n`;
+    mensagem += `Status: ${status}\n\n`;
+    mensagem += `📍 Esta ação:\n`;
+    mensagem += `- Removerá todos os dados do inventário\n`;
+    mensagem += `- Pode afetar relatórios históricos\n`;
+    mensagem += `- Não poderá ser desfeita\n\n`;
+    mensagem += `🔐 Apenas administradores têm esta permissão.\n\n`;
+    mensagem += `Deseja realmente prosseguir?`;
+    
+    return confirm(mensagem);
+}
+
+function exportarCSV() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status') || 'todos';
+    const dataInicio = params.get('data_inicio') || '';
+    const dataFim = params.get('data_fim') || '';
+    
+    let url = "{{ url_for('exportar_inventario_csv') }}?";
+    url += `status=${encodeURIComponent(status)}`;
+    if (dataInicio) url += `&data_inicio=${encodeURIComponent(dataInicio)}`;
+    if (dataFim) url += `&data_fim=${encodeURIComponent(dataFim)}`;
+    
+    window.location.href = url;
+}
+
+function imprimirLista() {
+    window.print();
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    flex-shrink: 0; /* Evita que o círculo encolha */
+}
+
+.avatar-circle span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+}
+
+.avatar-circle.bg-success { background-color: #198754; }
+.avatar-circle.bg-warning { background-color: #ffc107; }
+.avatar-circle.bg-secondary { background-color: #6c757d; }
+
+.table td {
+    vertical-align: middle;
+}
+.opacity-50 {
+    opacity: 0.5;
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+.btn-group .btn {
+    margin: 0;
+}
+.fw-bold {
+    font-weight: 600;
+}
+.text-primary {
+    color: #0d6efd !important;
+}
+/* Estilo para o DataTables - IGUAL AOS OUTROS TEMPLATES */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 1rem;
+}
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.2rem;
+    border: 1px solid #dee2e6;
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.25rem 0.5rem;
+    margin: 0 2px;
+    border-radius: 0.2rem;
+    border: 1px solid #dee2e6;
+    color: #0d6efd;
+    cursor: pointer;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background-color: #0d6efd;
+    color: white !important;
+    border-color: #0d6efd;
+}
+/* Ajuste fino para alinhamento */
+.row.g-0 {
+    margin-left: 0;
+    margin-right: 0;
+}
+.pe-2 {
+    padding-right: 0.5rem !important;
+}
+
+/* Cores dos botões */
+.btn-outline-info { color: #0dcaf0; border-color: #0dcaf0; }
+.btn-outline-info:hover { color: #000; background-color: #0dcaf0; border-color: #0dcaf0; }
+.btn-outline-primary { color: #0d6efd; border-color: #0d6efd; }
+.btn-outline-primary:hover { color: #fff; background-color: #0d6efd; border-color: #0d6efd; }
+.btn-outline-success { color: #198754; border-color: #198754; }
+.btn-outline-success:hover { color: #fff; background-color: #198754; border-color: #198754; }
+.btn-outline-danger { color: #dc3545; border-color: #dc3545; }
+.btn-outline-danger:hover { color: #fff; background-color: #dc3545; border-color: #dc3545; }
+
+@media print {
+    .btn-group, .btn, .dropdown, footer, nav { display: none !important; }
+    .card { border: 1px solid #000 !important; }
+    .badge { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; }
+}
+</style>
+{% endblock %}

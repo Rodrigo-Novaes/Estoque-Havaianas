@@ -1,0 +1,108 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Editar Usuário - Estoque Havaianas{% endblock %}
+
+{% block page_title %}Editar Usuário{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('listar_usuarios') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="content-card">
+            <form method="POST" action="{{ url_for('editar_usuario', id=usuario.id) }}">
+                <!-- Linha 1: Nome de usuário e Nova senha -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nome de usuário *</label>
+                        <input type="text" name="username" class="form-control" value="{{ form_data.username or usuario.username }}" required autofocus>
+                        <small class="text-muted">Será usado para login</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nova senha</label>
+                        <input type="password" name="password" class="form-control" placeholder="Deixe em branco para manter">
+                        <small class="text-muted">Mínimo 6 caracteres (opcional)</small>
+                    </div>
+                </div>
+
+                <!-- Linha 2: Nome completo e E-mail -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nome completo</label>
+                        <input type="text" name="nome" class="form-control" value="{{ form_data.nome or usuario.nome or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">E-mail</label>
+                        <input type="email" name="email" class="form-control" value="{{ form_data.email or usuario.email or '' }}">
+                    </div>
+                </div>
+
+                <!-- Linha 3: Telefone -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Telefone</label>
+                        <input type="text" name="telefone" id="telefone" class="form-control" value="{{ form_data.telefone or usuario.telefone or '' }}" placeholder="(11) 99999-9999">
+                        <small class="text-muted">Digite apenas números</small>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Espaço vazio para manter alinhamento -->
+                    </div>
+                </div>
+
+                <!-- Linha 4: Nível de permissão e Status -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Nível de permissão</label>
+                        <select name="admin" class="form-select">
+                            <option value="0" {% if (form_data.admin == '0') or (not form_data.admin and not usuario.admin) %}selected{% endif %}>Operador</option>
+                            <option value="1" {% if (form_data.admin == '1') or (not form_data.admin and usuario.admin) %}selected{% endif %}>Administrador</option>
+                        </select>
+                        <small class="text-muted">Administradores têm acesso total</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Status</label>
+                        <select name="ativo" class="form-select">
+                            <option value="1" {% if (form_data.ativo == '1') or (not form_data.ativo and usuario.ativo) %}selected{% endif %}>Ativo</option>
+                            <option value="0" {% if (form_data.ativo == '0') or (not form_data.ativo and not usuario.ativo) %}selected{% endif %}>Inativo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Informações adicionais -->
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Cadastro:</strong> {{ usuario.data_cadastro.strftime('%d/%m/%Y %H:%M') if usuario.data_cadastro else '---' }} | 
+                    <strong>Último acesso:</strong> {{ usuario.ultimo_acesso.strftime('%d/%m/%Y %H:%M') if usuario.ultimo_acesso else 'Nunca' }}
+                </div>
+
+                <!-- Botões -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{{ url_for('listar_usuarios') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Atualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script para máscara de telefone -->
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const telefoneInput = document.getElementById('telefone');
+    if (telefoneInput) {
+        IMask(telefoneInput, {
+            mask: '(00) 00000-0000'
+        });
+    }
+});
+</script>
+{% endblock %}

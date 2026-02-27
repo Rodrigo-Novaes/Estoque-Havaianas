@@ -1,0 +1,321 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Novo Fornecedor - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-building-add me-2"></i>Novo Fornecedor
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('lista_fornecedores') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-building me-2"></i>Cadastrar Novo Fornecedor</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_fornecedor') }}" id="formFornecedor">
+                    <!-- Abas -->
+                    <ul class="nav nav-tabs mb-4" id="fornecedorTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button">
+                                <i class="bi bi-building me-1"></i> Dados da Empresa
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="contato-tab" data-bs-toggle="tab" data-bs-target="#contato" type="button">
+                                <i class="bi bi-telephone me-1"></i> Contato
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="endereco-tab" data-bs-toggle="tab" data-bs-target="#endereco" type="button">
+                                <i class="bi bi-geo-alt me-1"></i> Endereço
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="observacoes-tab" data-bs-toggle="tab" data-bs-target="#observacoes" type="button">
+                                <i class="bi bi-chat-text me-1"></i> Observações
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Dados da Empresa -->
+                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Razão Social *</label>
+                                    <input type="text" class="form-control" name="razao_social" value="{{ form_data.razao_social or '' }}" required autofocus>
+                                    <small class="text-muted">Nome oficial da empresa</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Nome Fantasia</label>
+                                    <input type="text" class="form-control" name="nome_fantasia" value="{{ form_data.nome_fantasia or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">CNPJ *</label>
+                                    <input type="text" class="form-control" name="cnpj" id="cnpj" value="{{ form_data.cnpj or '' }}" placeholder="00.000.000/0000-00" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Inscrição Estadual</label>
+                                    <input type="text" class="form-control" name="inscricao_estadual" value="{{ form_data.inscricao_estadual or '' }}" placeholder="000.000.000.000">
+                                    <small class="text-muted">Isento: deixe em branco</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contato -->
+                        <div class="tab-pane fade" id="contato" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Responsável</label>
+                                    <input type="text" class="form-control" name="responsavel" value="{{ form_data.responsavel or '' }}" placeholder="Nome do contato principal">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">E-mail</label>
+                                    <input type="email" class="form-control" name="email" value="{{ form_data.email or '' }}" placeholder="contato@empresa.com.br">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefone</label>
+                                    <input type="tel" class="form-control" name="telefone" id="telefone" value="{{ form_data.telefone or '' }}" placeholder="(00) 0000-0000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Celular</label>
+                                    <input type="tel" class="form-control" name="celular" id="celular" value="{{ form_data.celular or '' }}" placeholder="(00) 00000-0000">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Endereço - COM DROPDOWN PERSONALIZADO -->
+                        <div class="tab-pane fade" id="endereco" role="tabpanel">
+                            <div class="row g-3">
+                                <!-- Primeira linha: CEP, Logradouro e Número -->
+                                <div class="col-md-3">
+                                    <label class="form-label">CEP</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="cep" id="cep" value="{{ form_data.cep or '' }}" placeholder="00000-000">
+                                        <button type="button" class="btn btn-outline-primary" onclick="buscarCEP()">
+                                            <i class="bi bi-search me-1"></i> Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">Logradouro</label>
+                                    <input type="text" class="form-control" name="logradouro" value="{{ form_data.logradouro or '' }}" placeholder="Rua, Avenida, etc.">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Número</label>
+                                    <input type="text" class="form-control" name="numero" value="{{ form_data.numero or '' }}" placeholder="S/N">
+                                </div>
+                                
+                                <!-- Segunda linha: Bairro, Complemento, Cidade e UF (DROP DOWN PERSONALIZADO) -->
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">Bairro</label>
+                                    <input type="text" class="form-control" name="bairro" value="{{ form_data.bairro or '' }}">
+                                </div>
+                                <div class="col-md-3" style="width: 25%;">
+                                    <label class="form-label">Complemento</label>
+                                    <input type="text" class="form-control" name="complemento" value="{{ form_data.complemento or '' }}" placeholder="Sala, Andar, etc.">
+                                </div>
+                                <div class="col-md-4" style="width: 32%;">
+                                    <label class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" name="cidade" value="{{ form_data.cidade or '' }}">
+                                </div>
+                                <div class="col-md-1" style="width: 10%; position: relative;">
+                                    <label class="form-label">UF</label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: white; border: 1px solid #ced4da; padding: 0.375rem 0.75rem;">
+                                            <span id="uf-selected">{{ form_data.estado or '--' }}</span> <span class="float-end">▼</span>
+                                        </button>
+                                        <ul class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;">
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF(''); return false;">--</a></li>
+                                            {% for uf in ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] %}
+                                            <li><a class="dropdown-item" href="#" onclick="selectUF('{{ uf }}'); return false;" {% if form_data.estado == uf %}style="background-color: #e9ecef;"{% endif %}>{{ uf }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <input type="hidden" name="estado" id="estado-hidden" value="{{ form_data.estado or '' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="tab-pane fade" id="observacoes" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="form-label">Observações</label>
+                                    <textarea class="form-control" name="observacoes" rows="6" 
+                                              placeholder="Informações adicionais sobre o fornecedor...">{{ form_data.observacoes or '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-secondary" onclick="voltarTab()">
+                            <i class="bi bi-arrow-left me-1"></i> Anterior
+                        </button>
+                        <div>
+                            <a href="{{ url_for('lista_fornecedores') }}" class="btn btn-outline-secondary me-2">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="btnSubmit">
+                                <i class="bi bi-check-circle me-1"></i> Cadastrar
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="avancarTab()">
+                            Próximo <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variável oculta para dados do formulário em caso de erro -->
+<input type="hidden" id="form-data" value="{{ form_data|tojson }}">
+
+<!-- CSS com ajustes responsivos -->
+<style>
+@media (min-width: 768px) {
+    .col-md-1 {
+        flex: 0 0 auto;
+        width: 10%;
+    }
+    .col-md-4 {
+        flex: 0 0 auto;
+        width: 32%;
+    }
+    .col-md-3 {
+        flex: 0 0 auto;
+        width: 25%;
+    }
+}
+
+/* Ajuste para o dropdown */
+.dropdown-menu {
+    min-width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* BOTÃO UF - SEM NENHUM EFEITO (CURSOR PADRÃO) */
+button[data-bs-toggle="dropdown"] {
+    cursor: default;
+    background-color: white;
+    color: #212529;
+}
+
+button[data-bs-toggle="dropdown"]:hover,
+button[data-bs-toggle="dropdown"]:focus,
+button[data-bs-toggle="dropdown"]:active {
+    background-color: white;
+    color: #212529;
+    border-color: #ced4da;
+    box-shadow: none;
+    outline: none;
+}
+
+/* LISTA - CURSOR PADRÃO E HOVER DESTACADO */
+.dropdown-item {
+    background-color: white;
+    color: #212529;
+    cursor: default;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #e9ecef !important;  /* Cinza destacado */
+    color: #212529;
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+// Função para selecionar UF
+function selectUF(valor) {
+    document.getElementById('uf-selected').textContent = valor || '--';
+    document.getElementById('estado-hidden').value = valor;
+}
+
+// Máscaras
+document.addEventListener('DOMContentLoaded', function() {
+    IMask(document.getElementById('cnpj'), { mask: '00.000.000/0000-00' });
+    IMask(document.getElementById('telefone'), { mask: '(00) 0000-0000' });
+    IMask(document.getElementById('celular'), { mask: '(00) 00000-0000' });
+    IMask(document.getElementById('cep'), { mask: '00000-000' });
+    
+    // Verificar se há dados no formulário para ativar a aba correta
+    const formData = document.getElementById('form-data').value;
+    if (formData && formData !== '{}') {
+        // Se houver dados, significa que houve erro
+        // Manter na primeira aba
+    }
+});
+
+// Navegação entre abas
+let currentTab = 0;
+const tabs = document.querySelectorAll('#fornecedorTabs .nav-link');
+
+function avancarTab() {
+    if (currentTab < tabs.length - 1) {
+        tabs[currentTab + 1].click();
+        currentTab++;
+    }
+}
+
+function voltarTab() {
+    if (currentTab > 0) {
+        tabs[currentTab - 1].click();
+        currentTab--;
+    }
+}
+
+// Busca de CEP - ATUALIZADO PARA USAR O DROPDOWN
+function buscarCEP() {
+    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    if (cep.length !== 8) {
+        alert('CEP inválido!');
+        return;
+    }
+    
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.erro) {
+                alert('CEP não encontrado!');
+                return;
+            }
+            document.querySelector('input[name="logradouro"]').value = data.logradouro || '';
+            document.querySelector('input[name="bairro"]').value = data.bairro || '';
+            document.querySelector('input[name="cidade"]').value = data.localidade || '';
+            
+            // Atualizar o dropdown com a UF retornada
+            if (data.uf) {
+                selectUF(data.uf);
+            }
+        })
+        .catch(() => alert('Erro ao buscar CEP!'));
+}
+
+// Validação do formulário
+document.getElementById('formFornecedor').addEventListener('submit', function(e) {
+    const cnpj = document.getElementById('cnpj').value.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+        e.preventDefault();
+        alert('CNPJ inválido!');
+    }
+});
+</script>
+{% endblock %}

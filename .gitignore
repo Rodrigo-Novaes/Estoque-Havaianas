@@ -1,0 +1,38 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Banco de dados (NÃO enviar)
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Arquivos de log
+*.log
+logs/
+
+# Uploads e arquivos temporários
+uploads/
+backups/
+temp/
+
+# Arquivos de backup
+*- BKP.py
+*.bkp
+*.old
+*.bak
+
+# Arquivos de IDE
+.vscode/
+.idea/
+
+# Arquivos do Windows
+Thumbs.db
+desktop.ini

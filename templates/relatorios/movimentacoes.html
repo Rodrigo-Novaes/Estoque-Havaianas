@@ -1,0 +1,519 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Movimentações - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-arrow-left-right me-2"></i>Histórico de Movimentações
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir
+    </button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros Automáticos - COM BOTÕES LIMPAR INDIVIDUAIS (SEM CHECK VERDE) -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="bi bi-funnel me-2"></i>Filtros Automáticos
+            <small class="text-muted float-end" id="statusFiltro">Sem filtros</small>
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">Data Início</label>
+                <div class="input-group">
+                    <input type="date" class="form-control form-control-sm" id="filtroDataInicio" 
+                           value="{{ data_inicio or '' }}">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('dataInicio')" title="Limpar filtro" style="display: none;" id="limpar-dataInicio">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Data Fim</label>
+                <div class="input-group">
+                    <input type="date" class="form-control form-control-sm" id="filtroDataFim" 
+                           value="{{ data_fim or '' }}">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('dataFim')" title="Limpar filtro" style="display: none;" id="limpar-dataFim">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Tipo</label>
+                <div class="input-group">
+                    <select class="form-select form-select-sm" id="filtroTipo">
+                        <option value="">Todos os Tipos</option>
+                        <option value="ENTRADA" {% if tipo == 'ENTRADA' %}selected{% endif %}>Entradas</option>
+                        <option value="SAIDA" {% if tipo == 'SAIDA' %}selected{% endif %}>Saídas</option>
+                        <option value="AJUSTE" {% if tipo == 'AJUSTE' %}selected{% endif %}>Ajustes</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('tipo')" title="Limpar filtro" style="display: none;" id="limpar-tipo">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Buscar</label>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" id="filtroBusca" 
+                           placeholder="Produto, origem, usuário...">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('busca')" title="Limpar filtro" style="display: none;" id="limpar-busca">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h6 class="text-success">Entradas</h6>
+                <h2 class="mb-0" id="totalEntradas">{{ total_entradas }}</h2>
+                <small class="text-muted">unidades recebidas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h6 class="text-danger">Saídas</h6>
+                <h2 class="mb-0" id="totalSaidas">{{ total_saidas }}</h2>
+                <small class="text-muted">unidades vendidas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h6 class="text-info">Saldo</h6>
+                <h2 class="mb-0" id="saldoMovimentacoes">{{ saldo }}</h2>
+                <small class="text-muted">diferença líquida</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Movimentações - Mantido original -->
+<div class="card">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">
+                <i class="bi bi-list-check me-2"></i>
+                Movimentações
+            </h5>
+            <small class="text-muted" id="contadorRegistros">{{ movimentacoes|length }} registros encontrados</small>
+        </div>
+        <span class="badge bg-primary" id="badgeTotal">{{ movimentacoes|length }} registros</span>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if movimentacoes %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tabelaMovimentacoes">
+                <thead class="table-light">
+                    <tr>
+                        <th width="15%">Data/Hora</th>
+                        <th width="10%">Tipo</th>
+                        <th width="30%">Produto</th>
+                        <th width="15%">Quantidade</th>
+                        <th width="15%">Origem</th>
+                        <th width="15%">Usuário</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    {% for mov in movimentacoes %}
+                    <tr data-data="{{ mov.data.strftime('%Y-%m-%d') }}"
+                        data-tipo="{{ mov.tipo }}"
+                        data-produto="{{ (mov.grade.produto.descricao if mov.grade and mov.grade.produto else '')|lower }}"
+                        data-origem="{{ (mov.origem or '')|lower }}"
+                        data-usuario="{{ (mov.usuario or '')|lower }}"
+                        data-quantidade="{{ mov.quantidade }}"
+                        data-tipo-numero="{% if mov.tipo == 'ENTRADA' %}1{% elif mov.tipo == 'SAIDA' %}2{% else %}3{% endif %}">
+                        <td>
+                            <small class="text-muted">{{ mov.data.strftime('%d/%m/%Y') }}</small><br>
+                            <small>{{ mov.data.strftime('%H:%M') }}</small>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if mov.tipo == 'ENTRADA' %}bg-success
+                                {% elif mov.tipo == 'SAIDA' %}bg-danger
+                                {% else %}bg-warning{% endif %}">
+                                {{ mov.tipo }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if mov.grade and mov.grade.produto %}
+                            <div class="d-flex align-items-center">
+                                <div class="color-indicator me-2" 
+                                     style="background-color: {{ cor_para_hex(mov.grade.cor) if cor_para_hex else '#ccc' }}"></div>
+                                <div>
+                                    <div class="fw-medium">{{ mov.grade.produto.descricao[:25] }}{% if mov.grade.produto.descricao|length > 25 %}...{% endif %}</div>
+                                    <small class="text-muted">{{ mov.grade.cor }} T{{ mov.grade.tamanho }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Grade #{{ mov.grade_id }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-bold {% if mov.tipo == 'ENTRADA' %}text-success{% else %}text-danger{% endif %}">
+                                {% if mov.tipo == 'ENTRADA' %}+{% else %}-{% endif %}{{ mov.quantidade }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ mov.origem or 'Sistema' }}</small>
+                            {% if mov.documento %}
+                            <br><small class="text-muted">Doc: {{ mov.documento }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ mov.usuario or 'Sistema' }}</small>
+                            {% if mov.observacao %}
+                            <br><small class="text-muted" title="{{ mov.observacao }}">{{ mov.observacao[:30] }}{% if mov.observacao|length > 30 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted fa-3x mb-3"></i>
+            <h5 class="text-muted">Nenhuma movimentação encontrada</h5>
+            <p class="text-muted">Tente ajustar os filtros ou realize uma movimentação.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Inicializar DataTable
+        inicializarDataTable();
+        
+        // Configurar filtros automáticos com botões de limpar
+        configurarFiltrosAutomaticos();
+        
+        // Aplicar filtros iniciais se houver valores nos campos
+        aplicarFiltros();
+        
+        // Verificar estado inicial dos botões
+        verificarBotaoLimpar('dataInicio', $('#filtroDataInicio').val());
+        verificarBotaoLimpar('dataFim', $('#filtroDataFim').val());
+        verificarBotaoLimpar('tipo', $('#filtroTipo').val());
+        verificarBotaoLimpar('busca', $('#filtroBusca').val());
+    });
+    
+    // ============ FUNÇÕES DE CONTROLE DOS BOTÕES LIMPAR ============
+    
+    function verificarBotaoLimpar(campoId, valor) {
+        const btnLimpar = $(`#limpar-${campoId}`);
+        if (valor && valor !== '') {
+            btnLimpar.show();
+        } else {
+            btnLimpar.hide();
+        }
+    }
+    
+    function limparFiltroIndividual(campoId) {
+        if (campoId === 'dataInicio') {
+            $('#filtroDataInicio').val('').trigger('change');
+            $('#limpar-dataInicio').hide();
+        } else if (campoId === 'dataFim') {
+            $('#filtroDataFim').val('').trigger('change');
+            $('#limpar-dataFim').hide();
+        } else if (campoId === 'tipo') {
+            $('#filtroTipo').val('').trigger('change');
+            $('#limpar-tipo').hide();
+        } else if (campoId === 'busca') {
+            $('#filtroBusca').val('').trigger('keyup');
+            $('#limpar-busca').hide();
+        }
+    }
+    
+    // ============ CONFIGURAÇÃO INICIAL ============
+    
+    function inicializarDataTable() {
+    // ✅ CORRIGIDO: Verificar se já foi inicializado
+    if (!$.fn.dataTable.isDataTable('#tabelaMovimentacoes')) {
+        $('#tabelaMovimentacoes').DataTable({
+            language: {
+                "sEmptyTable": "Nenhum registro encontrado",
+                "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                "sInfoPostFix": "",
+                "sInfoThousands": ".",
+                "sLengthMenu": "_MENU_ resultados por página",
+                "sLoadingRecords": "Carregando...",
+                "sProcessing": "Processando...",
+                "sZeroRecords": "Nenhum registro encontrado",
+                "sSearch": "Pesquisar:",
+                "oPaginate": {
+                    "sNext": "Próximo",
+                    "sPrevious": "Anterior",
+                    "sFirst": "Primeiro",
+                    "sLast": "Último"
+                },
+                "oAria": {
+                    "sSortAscending": ": Ordenar colunas de forma ascendente",
+                    "sSortDescending": ": Ordenar colunas de forma descendente"
+                }
+            },
+            pageLength: 25,
+            order: [[0, 'desc']],
+            responsive: true,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
+            destroy: true
+        });
+    }
+}
+    
+    function configurarFiltrosAutomaticos() {
+        // Configurar debounce para busca (500ms)
+        let timeoutBusca;
+        $('#filtroBusca').on('keyup', function() {
+            clearTimeout(timeoutBusca);
+            timeoutBusca = setTimeout(aplicarFiltros, 500);
+            verificarBotaoLimpar('busca', $(this).val());
+        });
+        
+        // Configurar filtro imediato para outros campos
+        $('#filtroDataInicio').on('change', function() {
+            aplicarFiltros();
+            verificarBotaoLimpar('dataInicio', $(this).val());
+        });
+        
+        $('#filtroDataFim').on('change', function() {
+            aplicarFiltros();
+            verificarBotaoLimpar('dataFim', $(this).val());
+        });
+        
+        $('#filtroTipo').on('change', function() {
+            aplicarFiltros();
+            verificarBotaoLimpar('tipo', $(this).val());
+        });
+    }
+    
+    // ============ FUNÇÕES DE FILTRO SIMPLES ============
+    
+    function aplicarFiltros() {
+        // Obter valores dos filtros
+        const dataInicio = $('#filtroDataInicio').val();
+        const dataFim = $('#filtroDataFim').val();
+        const tipo = $('#filtroTipo').val();
+        const busca = $('#filtroBusca').val().toLowerCase().trim();
+        
+        let totalEntradas = 0;
+        let totalSaidas = 0;
+        let contadorMovimentacoes = 0;
+        
+        // Percorrer todas as linhas da tabela
+        $('#corpoTabela tr').each(function() {
+            const $linha = $(this);
+            const dataMov = $linha.data('data');
+            const tipoMov = $linha.data('tipo');
+            const produtoMov = $linha.data('produto') || '';
+            const origemMov = $linha.data('origem') || '';
+            const usuarioMov = $linha.data('usuario') || '';
+            const quantidadeMov = parseInt($linha.data('quantidade')) || 0;
+            
+            // Obter texto visível das células
+            const textoProduto = $linha.find('td:eq(2)').text().toLowerCase();
+            const textoOrigem = $linha.find('td:eq(4)').text().toLowerCase();
+            const textoUsuario = $linha.find('td:eq(5)').text().toLowerCase();
+            
+            let mostrar = true;
+            
+            // Filtro por data
+            if (dataInicio && dataMov < dataInicio) {
+                mostrar = false;
+            }
+            if (dataFim && dataMov > dataFim) {
+                mostrar = false;
+            }
+            
+            // Filtro por tipo
+            if (tipo && tipoMov !== tipo) {
+                mostrar = false;
+            }
+            
+            // Filtro por busca (busca em produto, origem e usuário)
+            if (busca) {
+                const buscaProduto = produtoMov.includes(busca) || textoProduto.includes(busca);
+                const buscaOrigem = origemMov.includes(busca) || textoOrigem.includes(busca);
+                const buscaUsuario = usuarioMov.includes(busca) || textoUsuario.includes(busca);
+                
+                if (!buscaProduto && !buscaOrigem && !buscaUsuario) {
+                    mostrar = false;
+                }
+            }
+            
+            // Mostrar/ocultar linha
+            if (mostrar) {
+                $linha.show();
+                contadorMovimentacoes++;
+                
+                // Contar por tipo para estatísticas
+                if (tipoMov === 'ENTRADA') {
+                    totalEntradas += quantidadeMov;
+                } else if (tipoMov === 'SAIDA') {
+                    totalSaidas += quantidadeMov;
+                }
+            } else {
+                $linha.hide();
+            }
+        });
+        
+        // Atualizar interface
+        atualizarInterface(contadorMovimentacoes, totalEntradas, totalSaidas);
+    }
+    
+    function atualizarInterface(contadorMovimentacoes, totalEntradas, totalSaidas) {
+        // Atualizar contadores
+        $('#contadorRegistros').text(contadorMovimentacoes + ' registros encontrados');
+        $('#badgeTotal').text(contadorMovimentacoes + ' registros');
+        
+        // Atualizar estatísticas
+        $('#totalEntradas').text(totalEntradas);
+        $('#totalSaidas').text(totalSaidas);
+        $('#saldoMovimentacoes').text(totalEntradas - totalSaidas);
+        
+        // Atualizar status do filtro
+        atualizarStatusFiltro();
+    }
+    
+    function atualizarStatusFiltro() {
+        const dataInicio = $('#filtroDataInicio').val();
+        const dataFim = $('#filtroDataFim').val();
+        const tipo = $('#filtroTipo').val();
+        const busca = $('#filtroBusca').val();
+        
+        const filtrosAtivos = [];
+        
+        if (dataInicio || dataFim) {
+            const inicioFormatado = dataInicio ? formatarDataBR(dataInicio) : '';
+            const fimFormatado = dataFim ? formatarDataBR(dataFim) : '';
+            
+            if (dataInicio && dataFim) {
+                filtrosAtivos.push(`Período: ${inicioFormatado} a ${fimFormatado}`);
+            } else if (dataInicio) {
+                filtrosAtivos.push(`A partir de: ${inicioFormatado}`);
+            } else if (dataFim) {
+                filtrosAtivos.push(`Até: ${fimFormatado}`);
+            }
+        }
+        
+        if (tipo) {
+            let tipoTexto = 'Todos';
+            if (tipo === 'ENTRADA') tipoTexto = 'Entradas';
+            else if (tipo === 'SAIDA') tipoTexto = 'Saídas';
+            else if (tipo === 'AJUSTE') tipoTexto = 'Ajustes';
+            
+            filtrosAtivos.push(`Tipo: ${tipoTexto}`);
+        }
+        
+        if (busca) {
+            filtrosAtivos.push(`Busca: "${busca}"`);
+        }
+        
+        if (filtrosAtivos.length > 0) {
+            $('#statusFiltro').text(filtrosAtivos.join(' • '));
+            $('.card-header.bg-light').addClass('border-primary');
+        } else {
+            $('#statusFiltro').text('Sem filtros');
+            $('.card-header.bg-light').removeClass('border-primary');
+        }
+    }
+    
+    // ============ FUNÇÕES AUXILIARES ============
+    
+    function formatarDataBR(dataString) {
+        if (!dataString) return '';
+        const [ano, mes, dia] = dataString.split('-');
+        return `${dia}/${mes}/${ano}`;
+    }
+    
+    // Função para debug dos dados
+    function verificarDados() {
+        console.log('=== VERIFICANDO DADOS ===');
+        $('#corpoTabela tr:first').each(function() {
+            const $linha = $(this);
+            console.log('Data attributes:', {
+                data: $linha.data('data'),
+                tipo: $linha.data('tipo'),
+                produto: $linha.data('produto'),
+                origem: $linha.data('origem'),
+                usuario: $linha.data('usuario'),
+                quantidade: $linha.data('quantidade')
+            });
+            console.log('Texto das células:', {
+                produto: $linha.find('td:eq(2)').text(),
+                origem: $linha.find('td:eq(4)').text(),
+                usuario: $linha.find('td:eq(5)').text()
+            });
+        });
+    }
+</script>
+
+<style>
+    /* Estilos para filtros automáticos - mantendo layout original */
+    /* REMOVIDO: .filtro-auto.is-valid */
+    
+    /* Indicador de filtro ativo no cabeçalho */
+    .card-header.bg-light.border-primary {
+        border-left: 4px solid #0d6efd !important;
+    }
+    
+    .color-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .col-md-3 {
+            margin-bottom: 10px;
+        }
+        
+        #statusFiltro {
+            display: none;
+        }
+        
+        .card-header .float-end {
+            float: none !important;
+            display: block;
+            margin-top: 5px;
+        }
+    }
+    
+    /* Transições suaves para mostrar/ocultar linhas */
+    #corpoTabela tr {
+        transition: opacity 0.3s ease;
+    }
+    
+    /* Destaque para linhas visíveis */
+    #corpoTabela tr:not([style*="display: none"]):hover {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+    }
+</style>
+{% endblock %}

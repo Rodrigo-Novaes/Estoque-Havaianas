@@ -1,0 +1,395 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Meu Perfil - Estoque Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-person-circle me-2"></i>Meu Perfil
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Card Principal do Perfil -->
+        <div class="content-card mb-4">
+            <div class="row">
+                <!-- Coluna da Esquerda - Informações do Usuário -->
+                <div class="col-md-8">
+                    <h5 class="mb-2">
+                        <i class="bi bi-shield me-2"></i>
+                        {% if usuario.admin %}Administrador{% else %}Operador{% endif %}
+                    </h5>
+                    
+                    <div class="mb-2">
+                        <label class="fw-bold text-muted small mb-0">NOME COMPLETO</label>
+                        <p class="mb-1">{{ usuario.nome or 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="fw-bold text-muted small mb-0">EMAIL</label>
+                        <p class="mb-1">{{ usuario.email or 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="fw-bold text-muted small mb-0">TELEFONE</label>
+                        <p class="mb-1">
+                            {% if usuario.telefone %}
+                                {{ usuario.telefone }}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Coluna da Direita - Ações Rápidas -->
+                <div class="col-md-4">
+                    <div class="bg-light p-2 rounded">
+                        <h6 class="mb-2"><i class="bi bi-lightning-charge me-2"></i>Ações</h6>
+                        
+                        <div class="d-grid gap-1">
+                            <a href="#" class="btn btn-outline-primary text-start btn-sm" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
+                                <i class="bi bi-pencil me-2"></i> Editar Perfil
+                            </a>
+                            
+                            <a href="#" class="btn btn-outline-warning text-start btn-sm" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha">
+                                <i class="bi bi-key me-2"></i> Alterar Minha Senha
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Linha divisória -->
+            <hr class="my-3">
+            
+            <!-- Informações Complementares -->
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="fw-bold text-muted small mb-0">ID DO USUÁRIO</label>
+                    <p class="mb-1"><span class="badge bg-dark">#{{ "%03d"|format(usuario.id) }}</span></p>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-bold text-muted small mb-0">STATUS</label>
+                    <p class="mb-1">
+                        {% if usuario.ativo %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inativo</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-bold text-muted small mb-0">TIPO DE CONTA</label>
+                    <p class="mb-1">
+                        {% if usuario.admin %}
+                        <span class="badge bg-danger">Administrador</span>
+                        {% else %}
+                        <span class="badge bg-info">Operador</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label class="fw-bold text-muted small mb-0">DATA DE CADASTRO</label>
+                    <p class="mb-1">{{ usuario.data_cadastro.strftime('%d/%m/%Y %H:%M') if usuario.data_cadastro else '---' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="fw-bold text-muted small mb-0">ÚLTIMO ACESSO</label>
+                    <p class="mb-1">{% if usuario.ultimo_acesso %}{{ usuario.ultimo_acesso.strftime('%d/%m/%Y %H:%M') }}{% else %}Primeiro acesso{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Perfil -->
+<div class="modal fade" id="modalEditarPerfil" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar Perfil</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('perfil_atualizar') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome completo</label>
+                        <input type="text" class="form-control" name="nome" value="{{ usuario.nome or '' }}" placeholder="Seu nome completo">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">E-mail</label>
+                        <input type="email" class="form-control" name="email" value="{{ usuario.email or '' }}" placeholder="seu@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone</label>
+                        <input type="text" class="form-control" name="telefone" id="telefone" value="{{ usuario.telefone or '' }}" placeholder="(11) 99999-9999">
+                        <small class="text-muted">Digite apenas números</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Salvar alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Alterar Senha -->
+<div class="modal fade" id="modalAlterarSenha" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-key me-2"></i>Alterar Minha Senha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('perfil_alterar_senha') }}" id="formSenha">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Senha atual</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" name="senha_atual" id="senhaAtual" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('senhaAtual')">
+                                <i class="bi bi-eye" id="iconSenhaAtual"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nova senha</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" name="nova_senha" id="novaSenha" required minlength="6">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('novaSenha')">
+                                <i class="bi bi-eye" id="iconNovaSenha"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Mínimo 6 caracteres</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Confirmar nova senha</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" name="confirmar_senha" id="confirmarSenha" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('confirmarSenha')">
+                                <i class="bi bi-eye" id="iconConfirmarSenha"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3" id="senhaFraca" style="display: none;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        A senha deve ter pelo menos 6 caracteres.
+                    </div>
+                    
+                    <div class="alert alert-success mt-3" id="senhaForte" style="display: none;">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Senha válida!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning" id="btnAlterarSenha">
+                        <i class="bi bi-key me-1"></i> Alterar senha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/imask"></script>
+<script>
+// Função para mostrar/ocultar senha
+function toggleSenha(campoId) {
+    const campo = document.getElementById(campoId);
+    const icon = document.getElementById(`icon${campoId.charAt(0).toUpperCase() + campoId.slice(1)}`);
+    
+    if (campo.type === 'password') {
+        campo.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        campo.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+// Validação da senha em tempo real
+document.getElementById('novaSenha').addEventListener('input', function() {
+    const senha = this.value;
+    const senhaFraca = document.getElementById('senhaFraca');
+    const senhaForte = document.getElementById('senhaForte');
+    
+    if (senha.length > 0) {
+        if (senha.length < 6) {
+            senhaFraca.style.display = 'block';
+            senhaForte.style.display = 'none';
+        } else {
+            senhaFraca.style.display = 'none';
+            senhaForte.style.display = 'block';
+        }
+    } else {
+        senhaFraca.style.display = 'none';
+        senhaForte.style.display = 'none';
+    }
+});
+
+// Validação do formulário de senha
+document.getElementById('formSenha').addEventListener('submit', function(e) {
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmarSenha = document.getElementById('confirmarSenha').value;
+    
+    if (novaSenha.length < 6) {
+        e.preventDefault();
+        alert('A nova senha deve ter no mínimo 6 caracteres!');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        e.preventDefault();
+        alert('As senhas não conferem!');
+        return;
+    }
+});
+
+// Loading no botão de alterar senha
+document.getElementById('formSenha').addEventListener('submit', function() {
+    const btn = document.getElementById('btnAlterarSenha');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Alterando...';
+    btn.disabled = true;
+});
+
+// Máscara para telefone
+document.addEventListener('DOMContentLoaded', function() {
+    const telefoneInput = document.getElementById('telefone');
+    if (telefoneInput) {
+        IMask(telefoneInput, {
+            mask: '(00) 00000-0000'
+        });
+    }
+});
+</script>
+
+<style>
+/* Mantendo o estilo do seu sistema */
+.content-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    padding: 20px;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+    border-radius: 12px;
+}
+
+.btn-outline-primary, .btn-outline-warning {
+    border-width: 2px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #0066cc, #00cc66);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+.btn-outline-warning:hover {
+    background: #ffc107;
+    color: #333;
+    transform: translateY(-2px);
+}
+
+/* Estilo para os labels */
+.text-muted.small {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Modal */
+.modal-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: none;
+    padding: 1.5rem;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.modal-header.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #ffca2c) !important;
+    color: #333;
+}
+
+.modal-header.bg-primary {
+    background: linear-gradient(135deg, #0066cc, #00cc66) !important;
+}
+
+/* Input group */
+.input-group .btn-outline-secondary {
+    border-color: #dee2e6;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #0066cc;
+}
+
+/* Ajustes para reduzir altura */
+p {
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+}
+
+h5 {
+    font-size: 1.1rem;
+}
+
+h6 {
+    font-size: 0.9rem;
+}
+
+hr {
+    margin: 0.75rem 0;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.row {
+    margin-bottom: 0;
+}
+
+.mb-3 {
+    margin-bottom: 0.5rem !important;
+}
+
+.mt-3 {
+    margin-top: 0.5rem !important;
+}
+</style>
+{% endblock %}

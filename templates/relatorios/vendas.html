@@ -1,0 +1,1137 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Relatório de Vendas - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-receipt me-2"></i>Relatório de Vendas
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportarParaExcel()">
+        <i class="bi bi-file-excel me-1"></i> Excel
+    </button>
+    <a href="{{ url_for('pdv') }}" class="btn btn-sm btn-success">
+        <i class="bi bi-cash-coin me-1"></i> Nova Venda
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros Automáticos - COM BOTÕES LIMPAR INDIVIDUAIS -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="bi bi-funnel me-2"></i>Filtros Automáticos
+            <small class="text-muted float-end" id="statusFiltro">Sem filtros</small>
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">Data Início</label>
+                <div class="input-group">
+                    <input type="date" class="form-control form-control-sm filtro-auto" id="filtroDataInicio">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('dataInicio')" title="Limpar filtro" style="display: none;" id="limpar-dataInicio">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Data Fim</label>
+                <div class="input-group">
+                    <input type="date" class="form-control form-control-sm filtro-auto" id="filtroDataFim">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('dataFim')" title="Limpar filtro" style="display: none;" id="limpar-dataFim">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Forma de Pagamento</label>
+                <div class="input-group">
+                    <select class="form-select form-select-sm filtro-auto" id="filtroFormaPagamento">
+                        <option value="">Todas as Formas</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="CARTAO_CREDITO">Cartão Crédito</option>
+                        <option value="CARTAO_DEBITO">Cartão Débito</option>
+                        <option value="PIX">PIX</option>
+                        <option value="TRANSFERENCIA">Transferência</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('formaPagamento')" title="Limpar filtro" style="display: none;" id="limpar-formaPagamento">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Buscar</label>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm filtro-auto" id="filtroBusca" placeholder="Cliente, vendedor ou ID...">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('busca')" title="Limpar filtro" style="display: none;" id="limpar-busca">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas Dinâmicas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-body text-center">
+                <h6 class="text-success">Total em Vendas</h6>
+                <h2 class="mb-0" id="totalVendas">{{ total_vendas|format_currency }}</h2>
+                <small class="text-muted">Valor total vendido</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-primary h-100">
+            <div class="card-body text-center">
+                <h6 class="text-primary">Número de Vendas</h6>
+                <h2 class="mb-0" id="numeroVendas">{{ vendas|length }}</h2>
+                <small class="text-muted">Transações realizadas</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-info h-100">
+            <div class="card-body text-center">
+                <h6 class="text-info">Total de Itens</h6>
+                <h2 class="mb-0" id="totalItens">{{ total_itens }}</h2>
+                <small class="text-muted">Unidades vendidas</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-warning h-100">
+            <div class="card-body text-center">
+                <h6 class="text-warning">Ticket Médio</h6>
+                <h2 class="mb-0" id="ticketMedio">
+                    {% if vendas|length > 0 %}
+                        {{ (total_vendas/vendas|length)|format_currency }}
+                    {% else %}
+                        R$ 0,00
+                    {% endif %}
+                </h2>
+                <small class="text-muted">Por venda</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formas de Pagamento Dinâmicas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0">
+                    <i class="bi bi-credit-card me-2"></i>
+                    Formas de Pagamento
+                    <small class="text-muted float-end" id="contadorFormas">Resumo</small>
+                </h6>
+            </div>
+            <div class="card-body" id="containerFormasPagamento">
+                <div class="row">
+                    {% for forma in formas_pagamento %}
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <h6 class="mb-1">{{ forma.forma_pagamento or 'Não informado' }}</h6>
+                            <div class="text-primary fw-bold">{{ forma.quantidade }} vendas</div>
+                            <small class="text-success">{{ forma.total|format_currency if forma.total else "R$ 0,00" }}</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-3">
+                        <p class="text-muted mb-0">Nenhuma venda encontrada</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Vendas -->
+<div class="card">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">
+                <i class="bi bi-list-check me-2"></i>
+                Histórico de Vendas
+            </h5>
+            <small class="text-muted">Filtros aplicados automaticamente</small>
+        </div>
+        <span class="badge bg-primary" id="badgeContador">{{ vendas|length }} vendas</span>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if vendas %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tabelaVendas">
+                <thead class="table-light">
+                    <tr>
+                        <th width="10%">ID</th>
+                        <th width="20%">Data/Hora</th>
+                        <th width="25%">Cliente</th>
+                        <th width="15%">Pagamento</th>
+                        <th width="15%">Itens</th>
+                        <th width="15%">Total</th>
+                        <th width="10%">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    {% for venda in vendas %}
+                    <tr data-id="{{ venda.id }}"
+                        data-data="{{ venda.data.strftime('%Y-%m-%d') }}"
+                        data-pagamento="{{ venda.forma_pagamento or '' }}"
+                        data-cliente="{{ (venda.cliente or '')|lower }}"
+                        data-vendedor="{{ (venda.vendedor or '')|lower }}"
+                        data-total="{{ venda.total }}"
+                        data-itens="{{ venda.itens|sum(attribute='quantidade') }}"
+                        data-id-formatado="{{ "%03d"|format(venda.id) }}">
+                        <td>
+                            <span class="badge bg-dark">#{{ "%03d"|format(venda.id) }}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ venda.data.strftime('%d/%m/%Y') }}</small><br>
+                            <small>{{ venda.data.strftime('%H:%M') }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-medium">{{ venda.cliente or 'Não informado' }}</div>
+                            <small class="text-muted">{{ venda.vendedor or 'Sistema' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge pagamento-badge" data-pagamento="{{ venda.forma_pagamento or '' }}">
+                                {% if venda.forma_pagamento == 'DINHEIRO' %}Dinheiro
+                                {% elif venda.forma_pagamento == 'CARTAO_CREDITO' %}Cartão Crédito
+                                {% elif venda.forma_pagamento == 'CARTAO_DEBITO' %}Cartão Débito
+                                {% elif venda.forma_pagamento == 'PIX' %}PIX
+                                {% elif venda.forma_pagamento == 'TRANSFERENCIA' %}Transferência
+                                {% else %}{{ venda.forma_pagamento or 'N/A' }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ venda.itens|sum(attribute='quantidade') }}</span>
+                            <small class="text-muted d-block">itens</small>
+                        </td>
+                        <td>
+                            <span class="fw-bold text-success">{{ venda.total|format_currency }}</span>
+                            {% if venda.desconto > 0 %}
+                            <small class="text-danger d-block">-{{ venda.desconto|format_currency }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="verDetalhesVenda({{ venda.id }})" title="Ver detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="reimprimirVenda({{ venda.id }})" title="Reimprimir">
+                                    <i class="bi bi-printer"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarExclusaoVenda({{ venda.id }})" title="Excluir venda">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-cart-x text-muted fa-3x mb-3"></i>
+            <h5 class="text-muted">Nenhuma venda encontrada</h5>
+            <p class="text-muted">Tente ajustar os filtros ou realize uma venda.</p>
+            <a href="{{ url_for('pdv') }}" class="btn btn-success">
+                <i class="bi bi-cash-coin me-1"></i> Nova Venda
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para Detalhes da Venda -->
+<div class="modal fade" id="modalDetalhesVenda" tabindex="-1" aria-labelledby="modalDetalhesVendaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/comprovante/comprovante.js') }}"></script>
+
+<script>
+if (typeof Swal === 'undefined') {
+    console.error('SweetAlert2 não está carregado. Carregando agora...');
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+    document.head.appendChild(script);
+    
+    script.onload = function() {
+        console.log('SweetAlert2 carregado com sucesso');
+        inicializarFuncoes();
+    };
+} else {
+    console.log('SweetAlert2 já está carregado');
+    $(document).ready(function() {
+        inicializarFuncoes();
+    });
+}
+
+function inicializarFuncoes() {
+    $('#tabelaVendas').DataTable({
+        language: {
+            "sEmptyTable": "Nenhum registro encontrado",
+            "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+            "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "_MENU_ resultados por página",
+            "sLoadingRecords": "Carregando...",
+            "sProcessing": "Processando...",
+            "sZeroRecords": "Nenhum registro encontrado",
+            "sSearch": "Pesquisar:",
+            "oPaginate": {
+                "sNext": "Próximo",
+                "sPrevious": "Anterior",
+                "sFirst": "Primeiro",
+                "sLast": "Último"
+            },
+            "oAria": {
+                "sSortAscending": ": Ordenar colunas de forma ascendente",
+                "sSortDescending": ": Ordenar colunas de forma descendente"
+            }
+        },
+        pageLength: 25,
+        order: [[0, 'desc']],
+        responsive: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip'
+    });
+    
+    $('.pagamento-badge').each(function() {
+        var pagamento = $(this).data('pagamento');
+        $(this).removeClass().addClass('badge pagamento-badge');
+        
+        if (pagamento === 'DINHEIRO') {
+            $(this).addClass('bg-success');
+        } else if (pagamento === 'CARTAO_CREDITO') {
+            $(this).addClass('bg-primary');
+        } else if (pagamento === 'CARTAO_DEBITO') {
+            $(this).addClass('bg-info');
+        } else if (pagamento === 'PIX') {
+            $(this).addClass('bg-warning text-dark');
+        } else if (pagamento === 'TRANSFERENCIA') {
+            $(this).addClass('bg-dark');
+        } else {
+            $(this).addClass('bg-secondary');
+        }
+    });
+    
+    var timeoutBusca;
+    $('#filtroBusca').on('keyup', function() {
+        clearTimeout(timeoutBusca);
+        timeoutBusca = setTimeout(aplicarFiltros, 500);
+        verificarBotaoLimpar('busca', $(this).val());
+    });
+    
+    $('#filtroDataInicio').on('change', function() {
+        aplicarFiltros();
+        verificarBotaoLimpar('dataInicio', $(this).val());
+    });
+    
+    $('#filtroDataFim').on('change', function() {
+        aplicarFiltros();
+        verificarBotaoLimpar('dataFim', $(this).val());
+    });
+    
+    $('#filtroFormaPagamento').on('change', function() {
+        aplicarFiltros();
+        verificarBotaoLimpar('formaPagamento', $(this).val());
+    });
+    
+    verificarBotaoLimpar('dataInicio', $('#filtroDataInicio').val());
+    verificarBotaoLimpar('dataFim', $('#filtroDataFim').val());
+    verificarBotaoLimpar('formaPagamento', $('#filtroFormaPagamento').val());
+    verificarBotaoLimpar('busca', $('#filtroBusca').val());
+    
+    $(document).on('click', '.btn-reimprimir', function() {
+        var vendaId = $(this).data('venda-id');
+        reimprimirVenda(vendaId);
+    });
+}
+
+function verificarBotaoLimpar(campoId, valor) {
+    const btnLimpar = $(`#limpar-${campoId}`);
+    if (btnLimpar.length) {
+        if (valor && valor !== '') {
+            btnLimpar.show();
+        } else {
+            btnLimpar.hide();
+        }
+    }
+}
+
+function limparFiltroIndividual(campoId) {
+    if (campoId === 'dataInicio') {
+        $('#filtroDataInicio').val('').trigger('change');
+        $('#limpar-dataInicio').hide();
+    } else if (campoId === 'dataFim') {
+        $('#filtroDataFim').val('').trigger('change');
+        $('#limpar-dataFim').hide();
+    } else if (campoId === 'formaPagamento') {
+        $('#filtroFormaPagamento').val('').trigger('change');
+        $('#limpar-formaPagamento').hide();
+    } else if (campoId === 'busca') {
+        $('#filtroBusca').val('').trigger('keyup');
+        $('#limpar-busca').hide();
+    }
+}
+
+function formatarIdComZeros(id) {
+    return id.toString().padStart(3, '0');
+}
+
+function formatarMoeda(valor) {
+    var numero = typeof valor === 'string' ? parseFloat(valor) : valor;
+    if (isNaN(numero)) {
+        return 'R$ 0,00';
+    }
+    return numero.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatarCPFouCNPJ(documento) {
+    if (!documento) return '';
+    const nums = documento.replace(/\D/g, '');
+    if (nums.length === 11) {
+        return nums.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    } else if (nums.length === 14) {
+        return nums.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    }
+    return documento;
+}
+
+function aplicarFiltros() {
+    var dataInicio = $('#filtroDataInicio').val();
+    var dataFim = $('#filtroDataFim').val();
+    var formaPagamento = $('#filtroFormaPagamento').val();
+    var busca = $('#filtroBusca').val().toLowerCase().trim();
+    
+    var totalVendasFiltrado = 0;
+    var totalItensFiltrado = 0;
+    var contadorVendas = 0;
+    
+    $('#corpoTabela tr').each(function() {
+        var $linha = $(this);
+        var dataVenda = $linha.data('data');
+        var pagamentoVenda = $linha.data('pagamento');
+        var clienteVenda = $linha.data('cliente') || '';
+        var vendedorVenda = $linha.data('vendedor') || '';
+        var idVenda = $linha.data('id');
+        var idFormatadoVenda = $linha.data('id-formatado') || formatarIdComZeros(idVenda);
+        var totalVenda = parseFloat($linha.data('total')) || 0;
+        var itensVenda = parseInt($linha.data('itens')) || 0;
+        
+        var mostrar = true;
+        
+        if (dataInicio && dataVenda && dataVenda < dataInicio) {
+            mostrar = false;
+        }
+        if (dataFim && dataVenda && dataVenda > dataFim) {
+            mostrar = false;
+        }
+        
+        if (formaPagamento && pagamentoVenda !== formaPagamento) {
+            mostrar = false;
+        }
+        
+        if (busca) {
+            var buscaCliente = clienteVenda.includes(busca);
+            var buscaVendedor = vendedorVenda.includes(busca);
+            var buscaId = idVenda.toString().includes(busca) || idFormatadoVenda.includes(busca);
+            
+            if (!buscaCliente && !buscaVendedor && !buscaId) {
+                mostrar = false;
+            }
+        }
+        
+        if (mostrar) {
+            $linha.show();
+            contadorVendas++;
+            totalVendasFiltrado += totalVenda;
+            totalItensFiltrado += itensVenda;
+        } else {
+            $linha.hide();
+        }
+    });
+    
+    $('#badgeContador').text(contadorVendas + ' vendas');
+    $('#totalVendas').text(formatarMoeda(totalVendasFiltrado));
+    $('#numeroVendas').text(contadorVendas);
+    $('#totalItens').text(totalItensFiltrado);
+    
+    var ticketMedio = contadorVendas > 0 ? totalVendasFiltrado / contadorVendas : 0;
+    $('#ticketMedio').text(formatarMoeda(ticketMedio));
+    
+    atualizarStatusFiltro();
+}
+
+function atualizarStatusFiltro() {
+    var dataInicio = $('#filtroDataInicio').val();
+    var dataFim = $('#filtroDataFim').val();
+    var formaPagamento = $('#filtroFormaPagamento').val();
+    var busca = $('#filtroBusca').val();
+    
+    var filtrosAtivos = [];
+    
+    if (dataInicio || dataFim) {
+        if (dataInicio && dataFim) {
+            filtrosAtivos.push('Período: ' + formatarDataBR(dataInicio) + ' a ' + formatarDataBR(dataFim));
+        } else if (dataInicio) {
+            filtrosAtivos.push('A partir de: ' + formatarDataBR(dataInicio));
+        } else if (dataFim) {
+            filtrosAtivos.push('Até: ' + formatarDataBR(dataFim));
+        }
+    }
+    
+    if (formaPagamento) {
+        filtrosAtivos.push('Pagamento: ' + $('#filtroFormaPagamento option:selected').text());
+    }
+    
+    if (busca) {
+        filtrosAtivos.push('Busca: "' + busca + '"');
+    }
+    
+    if (filtrosAtivos.length > 0) {
+        $('#statusFiltro').text(filtrosAtivos.join(' • '));
+        $('.card-header.bg-light').addClass('border-primary');
+    } else {
+        $('#statusFiltro').text('Sem filtros');
+        $('.card-header.bg-light').removeClass('border-primary');
+    }
+}
+
+function formatarDataBR(dataString) {
+    if (!dataString) return '';
+    var partes = dataString.split('-');
+    return partes[2] + '/' + partes[1] + '/' + partes[0];
+}
+
+function confirmarExclusaoVenda(vendaId) {
+    console.log('Confirmando exclusão da venda #' + vendaId);
+    
+    const idFormatado = formatarIdComZeros(vendaId);
+    
+    if (confirm(`Tem certeza que deseja excluir a venda #${idFormatado}?`)) {
+        excluirVenda(vendaId);
+    }
+}
+
+function excluirVenda(vendaId) {
+    console.log("🔄 Iniciando exclusão da venda #" + vendaId);
+    
+    const idFormatado = formatarIdComZeros(vendaId);
+    
+    const linha = $(`tr[data-id="${vendaId}"]`);
+    if (linha.length) {
+        linha.css('opacity', '0.5');
+    }
+
+    fetch(`/api/pdv/venda/${vendaId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/relatorios/vendas?mensagem=excluida&id=${vendaId}`;
+        } else {
+            alert(`❌ Erro: ${data.message || 'Não foi possível excluir a venda.'}`);
+        }
+    })
+    .catch(error => {
+        alert('❌ Erro ao conectar com o servidor.');
+    })
+    .finally(() => {
+        if (linha.length) {
+            linha.css('opacity', '1');
+        }
+    });
+}
+
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    const inputTag = document.querySelector('input[name="csrf_token"]');
+    if (inputTag) {
+        return inputTag.value;
+    }
+    
+    return '';
+}
+
+function verDetalhesVenda(vendaId) {
+    var modalContent = document.querySelector('#modalDetalhesVenda .modal-content');
+    modalContent.innerHTML = `
+        <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">
+                <i class="bi bi-hourglass-split me-2"></i>
+                Carregando Venda #${formatarIdComZeros(vendaId)}
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <p class="text-muted">Buscando detalhes da venda...</p>
+            </div>
+        </div>
+    `;
+    
+    $('#modalDetalhesVenda').modal('show');
+    
+    fetch('/api/pdv/venda/' + vendaId + '/comprovante')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.comprovante) {
+                exibirDetalhesVenda(data.comprovante);
+            } else {
+                mostrarErroNoModal('Não foi possível carregar os detalhes');
+            }
+        })
+        .catch(error => {
+            mostrarErroNoModal('Erro: ' + error.message);
+        });
+}
+
+function exibirDetalhesVenda(venda) {
+    var dataVenda = new Date(venda.data_criacao);
+    var dataFormatada = dataVenda.toLocaleDateString('pt-BR');
+    var horaFormatada = dataVenda.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+    
+    var itensHTML = '';
+    var totalItens = 0;
+    var totalVenda = 0;
+    
+    if (venda.itens && venda.itens.length > 0) {
+        venda.itens.forEach(item => {
+            totalItens += item.quantidade;
+            var subtotal = item.preco * item.quantidade;
+            totalVenda += subtotal;
+            
+            itensHTML += `
+                <tr>
+                    <td><span class="badge bg-light text-dark border">${item.sku || 'N/A'}</span></td>
+                    <td>
+                        <div class="fw-medium">${item.descricao || 'Produto'}</div>
+                        ${item.cor || item.tamanho ? `
+                        <div class="mt-1">
+                            ${item.cor ? '<span class="badge bg-light text-dark border me-1"><i class="bi bi-palette"></i> ' + item.cor + '</span>' : ''}
+                            ${item.tamanho ? '<span class="badge bg-light text-dark border"><i class="bi bi-rulers"></i> ' + item.tamanho + '</span>' : ''}
+                        </div>
+                        ` : ''}
+                    </td>
+                    <td class="text-center"><span class="badge bg-primary rounded-pill">${item.quantidade}</span></td>
+                    <td class="text-end fw-semibold">${formatarMoeda(item.preco)}</td>
+                    <td class="text-end fw-bold text-success">${formatarMoeda(subtotal)}</td>
+                </tr>
+            `;
+        });
+    }
+    
+    const empresa = venda.empresa || {
+        razao_social: 'Havaianas Store',
+        nome_fantasia: 'Havaianas',
+        cnpj_formatado: '',
+        endereco: '',
+        contato: '',
+        cabecalho: '',
+        rodape: 'Obrigado pela preferência!'
+    };
+    
+    const cpfCnpj = venda.cliente_cpf || venda.cliente_cnpj || venda.cpf || '';
+    const documentoFormatado = formatarCPFouCNPJ(cpfCnpj);
+    
+    const enderecoCompleto = empresa.endereco || '';
+    const cabecalho = empresa.cabecalho || '';
+    const rodape = empresa.rodape || 'Obrigado pela preferência!';
+    
+    var modalHTML = `
+        <div class="modal-header bg-primary text-white">
+            <div class="d-flex align-items-center w-100">
+                <div class="me-3"><i class="bi bi-receipt display-6"></i></div>
+                <div>
+                    <h5 class="modal-title mb-1">Venda #${venda.venda_id_formatado || formatarIdComZeros(venda.venda_id)}</h5>
+                    <small class="opacity-75">${dataFormatada} às ${horaFormatada}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+        </div>
+        <div class="modal-body p-0">
+            ${cabecalho ? `
+            <div class="p-3 text-center border-bottom bg-light">
+                <p class="mb-0 fst-italic">${cabecalho}</p>
+            </div>
+            ` : ''}
+            
+            <div class="p-3 text-center border-bottom">
+                <h5 class="mb-1">${empresa.nome_fantasia || 'Havaianas Store'}</h5>
+                <div class="small text-muted">${empresa.razao_social || ''}</div>
+                ${empresa.cnpj_formatado ? '<div class="small text-muted">' + empresa.cnpj_formatado + '</div>' : ''}
+                ${enderecoCompleto ? '<div class="small text-muted">' + enderecoCompleto + '</div>' : ''}
+                ${empresa.contato ? '<div class="small text-muted">' + empresa.contato + '</div>' : ''}
+            </div>
+            
+            <div class="p-3 border-bottom">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Cliente</small>
+                        <div class="fw-medium">${venda.cliente_nome || venda.cliente || 'CONSUMIDOR'}</div>
+                    </div>
+                    ${documentoFormatado ? `
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">CPF/CNPJ</small>
+                        <div class="fw-medium">${documentoFormatado}</div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="row g-2 mt-2">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Vendedor</small>
+                        <div class="fw-medium">${venda.vendedor || 'Sistema'}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Forma de Pagamento</small>
+                        <span class="badge pagamento-badge fs-6 px-3 py-2">${formatarFormaPagamentoTexto(venda.forma_pagamento) || 'Não informado'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-3">
+                <h6 class="text-muted mb-3">
+                    <i class="bi bi-box-seam me-2"></i>Itens Vendidos
+                    <span class="badge bg-primary rounded-pill ms-2">${totalItens} unidades</span>
+                </h6>
+                
+                <div class="table-responsive rounded border">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="15%" class="ps-3">SKU</th>
+                                <th width="40%">Descrição</th>
+                                <th width="10%" class="text-center">Qtd</th>
+                                <th width="15%" class="text-end">Preço</th>
+                                <th width="20%" class="text-end pe-3">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itensHTML}</tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Subtotal:</td>
+                                <td class="text-end pe-3 fw-bold">${formatarMoeda(venda.subtotal || 0)}</td>
+                            </tr>
+                            ${venda.desconto_valor > 0 ? `
+                            <tr>
+                                <td colspan="4" class="text-end text-danger">Desconto (${venda.desconto_percentual || 0}%):</td>
+                                <td class="text-end pe-3 text-danger fw-bold">-${formatarMoeda(venda.desconto_valor)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr class="table-success">
+                                <td colspan="4" class="text-end fw-bold fs-6">TOTAL A PAGAR:</td>
+                                <td class="text-end pe-3 fw-bold fs-6 text-success">${formatarMoeda(venda.total || 0)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="p-3 text-center border-top bg-light">
+                <p class="mb-0 fst-italic">${rodape}</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle me-1"></i> Fechar
+            </button>
+            <button type="button" class="btn btn-primary btn-reimprimir" data-venda-id="${venda.venda_id || venda.id}">
+                <i class="bi bi-printer me-1"></i> Reimprimir Venda
+            </button>
+        </div>
+    `;
+    
+    var modalContent = document.querySelector('#modalDetalhesVenda .modal-content');
+    modalContent.innerHTML = modalHTML;
+    
+    const badge = modalContent.querySelector('.pagamento-badge');
+    if (badge) {
+        const forma = venda.forma_pagamento;
+        badge.classList.remove('bg-success', 'bg-primary', 'bg-info', 'bg-warning', 'bg-dark');
+        
+        if (forma === 'DINHEIRO') {
+            badge.classList.add('bg-success');
+        } else if (forma === 'CARTAO_CREDITO') {
+            badge.classList.add('bg-primary');
+        } else if (forma === 'CARTAO_DEBITO') {
+            badge.classList.add('bg-info');
+        } else if (forma === 'PIX') {
+            badge.classList.add('bg-warning', 'text-dark');
+        } else if (forma === 'TRANSFERENCIA') {
+            badge.classList.add('bg-dark');
+        } else {
+            badge.classList.add('bg-secondary');
+        }
+    }
+}
+
+function formatarFormaPagamentoTexto(forma) {
+    const formatos = {
+        'DINHEIRO': 'Dinheiro',
+        'CARTAO_CREDITO': 'Cartão Crédito',
+        'CARTAO_DEBITO': 'Cartão Débito',
+        'PIX': 'PIX',
+        'TRANSFERENCIA': 'Transferência'
+    };
+    return formatos[forma] || forma;
+}
+
+function mostrarErroNoModal(mensagem) {
+    var modalContent = document.querySelector('#modalDetalhesVenda .modal-content');
+    modalContent.innerHTML = `
+        <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Erro ao Carregar Venda
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="text-center py-4">
+                <div class="mb-3"><i class="bi bi-x-circle text-danger display-4"></i></div>
+                <h5 class="text-danger mb-3">Ocorreu um erro</h5>
+                <div class="alert alert-danger text-start">
+                    <i class="bi bi-info-circle me-2"></i>
+                    ${mensagem}
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle me-1"></i> Fechar
+            </button>
+        </div>
+    `;
+}
+
+// ========== FUNÇÃO DE REIMPRESSÃO CORRIGIDA ==========
+function reimprimirVenda(vendaId) {
+    console.log("🔄 Reimprimindo venda #" + vendaId);
+    
+    // 🔥 IGUAL AO PDV: Buscar comprovante e configurações
+    fetch(`/api/pdv/venda/${vendaId}/comprovante`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fetch('/api/config/impressao/dados')
+                    .then(configResponse => configResponse.json())
+                    .then(configData => {
+                        const config = configData.config;
+                        
+                        console.log('📋 Configurações de impressão:', config);
+                        
+                        // 🔥 IGUAL AO PDV: Abrir janela
+                        const janela = window.open('', 'Comprovante', 
+                            'width=900,height=600,top=100,left=100,scrollbars=yes'
+                        );
+                        
+                        if (!janela) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Pop-up bloqueado',
+                                text: 'Permita popups para ver o comprovante!'
+                            });
+                            return;
+                        }
+                        
+                        // 🔥 IGUAL AO PDV: Montar objeto de dados
+                        const dadosImpressao = {
+                            venda_id: data.comprovante.id,
+                            data: new Date(data.comprovante.data_criacao).toLocaleString('pt-BR'),
+                            cliente: data.comprovante.cliente_nome || '',
+                            cpf: data.comprovante.cliente_cpf || '',
+                            vendedor: data.comprovante.vendedor || 'Sistema',
+                            itens: data.comprovante.itens.map(item => ({
+                                descricao: item.descricao,
+                                quantidade: item.quantidade,
+                                preco: item.preco
+                            })),
+                            total: data.comprovante.total,
+                            subtotal: data.comprovante.subtotal,
+                            desconto_valor: data.comprovante.desconto_valor || 0,
+                            desconto_percentual: data.comprovante.desconto_percentual || 0,
+                            forma_pagamento: data.comprovante.forma_pagamento,
+                            empresa: data.comprovante.empresa,
+                            config_impressao: config
+                        };
+                        
+                        console.log('📦 Dados para impressão preparados');
+                        
+                        // 🔥 IGUAL AO PDV: Chamar a função de impressão
+                        if (typeof imprimirComprovante === 'function') {
+                            console.log('🖨️ Chamando função imprimirComprovante...');
+                            imprimirComprovante(janela, dadosImpressao);
+                        } else {
+                            console.error('❌ Função imprimirComprovante não encontrada!');
+                            // Fallback para mensagem de erro
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erro',
+                                text: 'Função de impressão não encontrada. Recarregue a página.'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Erro ao carregar configurações:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: 'Erro ao carregar configurações de impressão.'
+                        });
+                    });
+            } else {
+                console.error('❌ Erro no comprovante:', data.error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: 'Não foi possível carregar o comprovante.'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao buscar comprovante:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: 'Erro ao conectar com o servidor.'
+            });
+        });
+}
+
+// ========== FUNÇÃO MANUAL CORRIGIDA ==========
+function gerarComprovanteManual(janela, venda) {
+    const config = venda.config_impressao || { tipo: 'dialogo', papel: '80mm', vias: 1, mensagem: 'Obrigado pela preferência!' };
+    const isAuto = config.tipo === 'auto';
+    const isVisualizar = config.tipo === 'visualizar';
+    
+    let onloadFunction = '';
+    
+    if (isAuto) {
+        onloadFunction = 'setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 100);';
+    } else if (isVisualizar) {
+        onloadFunction = 'setTimeout(function() { window.close(); }, 1000);';
+    } else {
+        onloadFunction = 'window.print(); setTimeout(function() { window.close(); }, 1000);';
+    }
+    
+    // Ajustar largura baseada no papel
+    let largura = '280px';
+    if (config.papel === '58mm') largura = '58mm';
+    if (config.papel === '80mm') largura = '80mm';
+    if (config.papel === 'a4') largura = '210mm';
+    
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Comprovante de Venda #${venda.venda_id_formatado}</title>
+        <meta charset="UTF-8">
+        <style>
+            body { 
+                font-family: 'Courier New', monospace; 
+                width: ${largura};
+                margin: 0 auto; 
+                padding: 10px;
+                font-size: 12px; 
+            }
+            h1 { text-align: center; font-size: 16px; margin: 5px 0; }
+            h2 { text-align: center; font-size: 14px; margin: 5px 0; }
+            hr { border-top: 1px dashed #000; margin: 8px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 4px 0; }
+            .total { font-weight: bold; font-size: 14px; margin-top: 8px; }
+            .center { text-align: center; }
+            .right { text-align: right; }
+            .info { margin: 5px 0; }
+            .item { margin: 2px 0; }
+        </style>
+    </head>
+    <body onload="${onloadFunction}">
+        <h1>${venda.empresa.nome_fantasia || 'Havaianas Store'}</h1>
+        <div class="center">${venda.empresa.razao_social || ''}</div>
+        ${venda.empresa.cnpj_formatado ? '<div class="center">' + venda.empresa.cnpj_formatado + '</div>' : ''}
+        ${venda.empresa.endereco ? '<div class="center">' + venda.empresa.endereco + '</div>' : ''}
+        ${venda.empresa.contato ? '<div class="center">' + venda.empresa.contato + '</div>' : ''}
+        <hr>
+        <div class="center"><strong>COMPROVANTE DE VENDA</strong></div>
+        <div class="center"><strong>#${venda.venda_id_formatado}</strong></div>
+        <div class="center">${venda.data}</div>
+        <hr>
+        <div class="info"><strong>Cliente:</strong> ${venda.cliente}</div>
+        ${venda.cpf ? '<div class="info"><strong>CPF/CNPJ:</strong> ' + venda.cpf + '</div>' : ''}
+        <div class="info"><strong>Vendedor:</strong> ${venda.vendedor}</div>
+        <hr>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th class="center">Qtd</th>
+                <th class="right">Preço</th>
+                <th class="right">Total</th>
+            </tr>
+            ${venda.itens.map((item, idx) => `
+            <tr>
+                <td>${idx+1}. ${item.descricao || item.sku || 'Produto'}</td>
+                <td class="center">${item.quantidade}</td>
+                <td class="right">R$ ${item.preco.toFixed(2).replace('.', ',')}</td>
+                <td class="right">R$ ${(item.quantidade * item.preco).toFixed(2).replace('.', ',')}</td>
+            </tr>
+            `).join('')}
+        </table>
+        <hr>
+        <div class="right"><strong>Subtotal:</strong> R$ ${venda.subtotal.toFixed(2).replace('.', ',')}</div>
+        ${venda.desconto_valor > 0 ? '<div class="right"><strong>Desconto:</strong> -R$ ' + venda.desconto_valor.toFixed(2).replace('.', ',') + '</div>' : ''}
+        <div class="right total"><strong>TOTAL:</strong> R$ ${venda.total.toFixed(2).replace('.', ',')}</div>
+        <hr>
+        <div><strong>Forma de pagamento:</strong> ${venda.forma_pagamento.replace('_', ' ')}</div>
+        <hr>
+        <div class="center">${venda.empresa.rodape || config.mensagem || 'Obrigado pela preferência!'}</div>
+        <div class="center"><small>** COMPROVANTE NÃO FISCAL **</small></div>
+    </body>
+    </html>
+    `;
+    
+    janela.document.write(html);
+    janela.document.close();
+    janela.focus();
+}
+
+function exportarParaExcel() {
+    var contador = $('#badgeContador').text();
+    if (contador.includes('0 vendas')) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Nenhum dado para exportar',
+            text: 'Não há vendas com os filtros atuais para exportar.'
+        });
+        return;
+    }
+    
+    $('#tabelaVendas').DataTable().button('.buttons-excel').trigger();
+}
+</script>
+
+<style>
+.filtro-auto.is-valid {
+    border-color: #198754;
+    background-color: rgba(25, 135, 84, 0.05);
+}
+
+.card-header.bg-light.border-primary {
+    border-left: 4px solid #0d6efd !important;
+}
+
+#corpoTabela tr {
+    transition: all 0.3s ease;
+}
+
+#corpoTabela tr:hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+.badge.bg-dark {
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+
+.btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+.btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+@keyframes fadeOutDelete {
+    from { opacity: 1; background-color: #fff; }
+    to { opacity: 0; background-color: #ffe6e6; }
+}
+
+tr.deleting {
+    animation: fadeOutDelete 0.5s ease-out;
+}
+
+@media (max-width: 768px) {
+    .col-md-3 {
+        margin-bottom: 10px;
+    }
+    #statusFiltro {
+        display: none;
+    }
+}
+</style>
+{% endblock %}

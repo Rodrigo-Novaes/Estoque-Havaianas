@@ -1,0 +1,399 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Matriz de Estoque - {{ produto.descricao }}{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-grid-3x3-gap me-2"></i>Matriz de Estoque: {{ produto.descricao }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex">
+    <a href="{{ url_for('produtos') }}" class="btn btn-outline-secondary me-2">
+        <i class="bi bi-arrow-left me-2"></i> Voltar
+    </a>
+    <a href="{{ url_for('detalhe_produto', id=produto.id) }}" class="btn btn-outline-primary">
+        <i class="bi bi-eye me-2"></i> Ver Detalhes
+    </a>
+    <a href="{{ url_for('entrada_estoque') }}?produto={{ produto.id }}" class="btn btn-success ms-2">
+        <i class="bi bi-plus-circle me-2"></i> Entrada de Estoque
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">
+                    <i class="bi bi-upc-scan me-2"></i>{{ produto.sku }} - {{ produto.descricao }}
+                </h5>
+                <p class="mb-0 text-muted small">
+                    Modelo: {{ produto.modelo }} | Coleção: {{ produto.colecao or 'Não informada' }} | Gênero: {{ produto.genero }}
+                </p>
+            </div>
+            <div class="col-md-6 text-end">
+                <span class="badge bg-primary fs-6">
+                    <i class="bi bi-box-seam me-1"></i>Total em Estoque: <strong id="totalEstoque">0</strong>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        {% if cores and tamanhos %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="tabelaMatriz">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 150px;">Cor \ Tamanho</th>
+                        {% for tamanho in tamanhos %}
+                        <th class="text-center" style="width: 80px;">
+                            <span class="badge bg-secondary">{{ tamanho }}</span>
+                        </th>
+                        {% endfor %}
+                        <th class="text-center bg-primary text-white" style="width: 100px;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cor in cores %}
+                    <tr>
+                        <td class="fw-bold" style="background-color: #f8f9fa;">
+                            {% if cor|lower == 'azul' %}
+                            <span class="badge cor-badge cor-azul">{{ cor }}</span>
+                            {% elif cor|lower == 'vermelho' %}
+                            <span class="badge cor-badge cor-vermelho">{{ cor }}</span>
+                            {% elif cor|lower == 'preto' %}
+                            <span class="badge cor-badge cor-preto">{{ cor }}</span>
+                            {% elif cor|lower == 'branco' %}
+                            <span class="badge cor-badge cor-branco">{{ cor }}</span>
+                            {% elif cor|lower == 'verde' %}
+                            <span class="badge cor-badge cor-verde">{{ cor }}</span>
+                            {% elif cor|lower == 'amarelo' %}
+                            <span class="badge cor-badge cor-amarelo">{{ cor }}</span>
+                            {% elif cor|lower == 'rosa' %}
+                            <span class="badge cor-badge cor-rosa">{{ cor }}</span>
+                            {% elif cor|lower == 'cinza' %}
+                            <span class="badge cor-badge cor-cinza">{{ cor }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ cor }}</span>
+                            {% endif %}
+                        </td>
+                        {% for tamanho in tamanhos %}
+                        <td class="text-center {% if matriz[cor][tamanho] is defined and matriz[cor][tamanho] == 0 %}table-danger{% elif matriz[cor][tamanho] is defined and matriz[cor][tamanho] < 5 %}table-warning{% endif %}">
+                            {% if matriz[cor][tamanho] is defined %}
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="fw-bold fs-5">{{ matriz[cor][tamanho] }}</span>
+                                <div class="btn-group btn-group-xs mt-1">
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            onclick="ajustarEstoque('{{ produto.id }}', '{{ cor }}', '{{ tamanho }}', 1)"
+                                            title="Adicionar 1">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="ajustarEstoque('{{ produto.id }}', '{{ cor }}', '{{ tamanho }}', -1)"
+                                            title="Remover 1">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            <div class="mt-1">
+                                <button class="btn btn-sm btn-outline-secondary" 
+                                        onclick="criarGrade('{{ produto.id }}', '{{ cor }}', '{{ tamanho }}')"
+                                        title="Criar grade">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center fw-bold bg-light">
+                            <span id="totalCor{{ loop.index }}">0</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr>
+                        <td class="fw-bold">TOTAL POR TAMANHO</td>
+                        {% for tamanho in tamanhos %}
+                        <td class="text-center fw-bold" id="totalTamanho{{ loop.index }}">0</td>
+                        {% endfor %}
+                        <td class="text-center fw-bold bg-primary text-white" id="totalGeral">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Legenda -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Legenda</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <span class="badge bg-danger me-2">&nbsp;&nbsp;</span> Estoque zerado
+                            </div>
+                            <div class="col-6">
+                                <span class="badge bg-warning me-2">&nbsp;&nbsp;</span> Estoque baixo (< 5)
+                            </div>
+                            <div class="col-6 mt-2">
+                                <span class="badge bg-secondary me-2">&nbsp;&nbsp;</span> Sem grade cadastrada
+                            </div>
+                            <div class="col-6 mt-2">
+                                <button class="btn btn-sm btn-outline-success me-2"><i class="bi bi-plus"></i></button> +1 unidade
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0"><i class="bi bi-lightning-charge me-2"></i>Ações Rápidas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="exportarParaExcel()">
+                                <i class="bi bi-file-earmark-excel me-2"></i> Exportar para Excel
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="alert('Em desenvolvimento')">
+                                <i class="bi bi-printer me-2"></i> Imprimir Matriz
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-grid-3x3-gap display-1 text-muted mb-3"></i>
+            <h4>Nenhuma grade cadastrada</h4>
+            <p class="text-muted">Este produto não possui grades (cores/tamanhos) cadastradas.</p>
+            <div class="mt-3">
+                <a href="{{ url_for('editar_produto', id=produto.id) }}" class="btn btn-primary me-2">
+                    <i class="bi bi-pencil me-2"></i> Cadastrar Grades
+                </a>
+                <a href="{{ url_for('entrada_estoque') }}?produto={{ produto.id }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-2"></i> Cadastrar com Estoque
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+#tabelaMatriz th, #tabelaMatriz td {
+    vertical-align: middle !important;
+}
+
+#tabelaMatriz td:hover {
+    background-color: #f8f9fa !important;
+    cursor: pointer;
+}
+
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.btn-group-xs > .btn {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.75rem;
+    border-radius: 0.2rem;
+}
+
+/* Classes para cores */
+.cor-badge {
+    min-width: 80px;
+    padding: 0.5em 1em;
+}
+
+.cor-azul {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+
+.cor-vermelho {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.cor-preto {
+    background-color: #212529 !important;
+    color: white !important;
+}
+
+.cor-branco {
+    background-color: #ffffff !important;
+    color: black !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.cor-verde {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+.cor-amarelo {
+    background-color: #ffc107 !important;
+    color: black !important;
+}
+
+.cor-rosa {
+    background-color: #e83e8c !important;
+    color: white !important;
+}
+
+.cor-cinza {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calcular totais quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    calcularTotais();
+});
+
+function calcularTotais() {
+    let totalGeral = 0;
+    const tabela = document.getElementById('tabelaMatriz');
+    
+    // Calcular totais por cor
+    const linhas = tabela.querySelectorAll('tbody tr');
+    linhas.forEach((linha, corIndex) => {
+        let totalCor = 0;
+        const celulas = linha.querySelectorAll('td:not(:first-child):not(:last-child)');
+        
+        celulas.forEach(celula => {
+            const valorSpan = celula.querySelector('.fw-bold.fs-5');
+            if (valorSpan) {
+                const valor = parseInt(valorSpan.textContent) || 0;
+                totalCor += valor;
+            }
+        });
+        
+        // Atualizar total da cor
+        const totalCorElement = document.getElementById('totalCor' + (corIndex + 1));
+        if (totalCorElement) {
+            totalCorElement.textContent = totalCor;
+        }
+        
+        totalGeral += totalCor;
+    });
+    
+    // Calcular totais por tamanho
+    const colunas = tabela.querySelectorAll('thead th:not(:first-child):not(:last-child)');
+    colunas.forEach((coluna, tamanhoIndex) => {
+        let totalTamanho = 0;
+        const colIndex = tamanhoIndex + 1; // +1 porque pulamos a primeira coluna (cor)
+        
+        linhas.forEach(linha => {
+            const celula = linha.querySelector(`td:nth-child(${colIndex + 1})`); // +1 porque pulamos a primeira coluna
+            if (celula) {
+                const valorSpan = celula.querySelector('.fw-bold.fs-5');
+                if (valorSpan) {
+                    const valor = parseInt(valorSpan.textContent) || 0;
+                    totalTamanho += valor;
+                }
+            }
+        });
+        
+        // Atualizar total do tamanho
+        const totalTamanhoElement = document.getElementById('totalTamanho' + (tamanhoIndex + 1));
+        if (totalTamanhoElement) {
+            totalTamanhoElement.textContent = totalTamanho;
+        }
+    });
+    
+    // Atualizar total geral
+    document.getElementById('totalGeral').textContent = totalGeral;
+    document.getElementById('totalEstoque').textContent = totalGeral;
+}
+
+function ajustarEstoque(produtoId, cor, tamanho, quantidade) {
+    if (confirm(`Deseja ${quantidade > 0 ? 'adicionar' : 'remover'} ${Math.abs(quantidade)} unidade(s) de ${cor} tamanho ${tamanho}?`)) {
+        fetch(`/api/estoque/ajustar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                produto_id: produtoId,
+                cor: cor,
+                tamanho: tamanho,
+                quantidade: quantidade
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Estoque atualizado com sucesso!');
+                location.reload(); // Recarrega a página para atualizar os valores
+            } else {
+                alert('❌ Erro: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('❌ Erro ao atualizar estoque');
+        });
+    }
+}
+
+function criarGrade(produtoId, cor, tamanho) {
+    if (confirm(`Deseja criar uma nova grade para ${cor} tamanho ${tamanho}?`)) {
+        fetch(`/api/grade/criar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                produto_id: produtoId,
+                cor: cor,
+                tamanho: tamanho,
+                estoque_inicial: 0
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Grade criada com sucesso!');
+                location.reload();
+            } else {
+                alert('❌ Erro: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('❌ Erro ao criar grade');
+        });
+    }
+}
+
+function exportarParaExcel() {
+    // Implementação simples - em produção usar uma biblioteca
+    alert('Funcionalidade de exportação será implementada em breve!');
+    // Sugestão: usar SheetJS (xlsx) ou TableExport
+}
+
+// Atualizar a cada 30 segundos (opcional)
+// setInterval(calcularTotais, 30000);
+</script>
+{% endblock %}

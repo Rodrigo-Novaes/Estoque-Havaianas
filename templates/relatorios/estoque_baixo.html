@@ -1,0 +1,1119 @@
+{% extends "layout/base.html" %} {% block title %}Relatório de Estoque Baixo -
+Havaianas{% endblock %} {% block page_title %}
+<i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Estoque Abaixo
+do Mínimo {% endblock %} {% block page_actions %}
+<div class="btn-group">
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-primary"
+    onclick="window.print()"
+  >
+    <i class="bi bi-printer me-1"></i> Imprimir
+  </button>
+  <a href="{{ url_for('entrada_estoque') }}" class="btn btn-sm btn-success">
+    <i class="bi bi-plus-circle me-1"></i> Reposição Rápida
+  </a>
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-info"
+    onclick="exportarParaExcel()"
+  >
+    <i class="bi bi-file-excel me-1"></i> Exportar
+  </button>
+</div>
+{% endblock %} {% block content %}
+<!-- Filtros - TODOS PADRONIZADOS COM INPUT-GROUP -->
+<div class="card mb-4">
+  <div class="card-header bg-light">
+    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Nível de Urgência</label>
+        <div class="input-group">
+          <select class="form-select form-select-sm" id="filtro-urgencia">
+            <option value="todos">Todos os Níveis</option>
+            <option value="critico">Crítico (estoque = 0)</option>
+            <option value="alto">Alto (faltam ≥ 5)</option>
+            <option value="medio">Médio (faltam 1-4)</option>
+          </select>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltro('urgencia')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-urgencia"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Modelo</label>
+        <div class="input-group">
+          <select class="form-select form-select-sm" id="filtro-modelo">
+            <option value="">Todos Modelos</option>
+            <!-- Modelos serão carregados via JavaScript da API -->
+          </select>
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltro('modelo')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-modelo"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Cor</label>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            id="filtro-cor"
+            placeholder="Filtrar por cor..."
+          />
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltro('cor')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-cor"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Localização</label>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            id="filtro-local"
+            placeholder="Prateleira, Gaveta..."
+          />
+          <button
+            class="btn btn-sm btn-outline-secondary"
+            type="button"
+            onclick="limparFiltro('local')"
+            title="Limpar filtro"
+            style="display: none"
+            id="limpar-local"
+          >
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard de Alertas -->
+<div class="row mb-4">
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div
+      class="card border-start-0 border-top-0 border-bottom-0 border-end-0 border-5 border-warning h-100"
+    >
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-warning text-uppercase mb-1">Alerta Total</h6>
+            <h2 class="mb-0">{{ grades|length }}</h2>
+            <p class="mb-0 text-muted small">Itens abaixo do mínimo</p>
+          </div>
+          <div class="bg-warning bg-opacity-10 p-3 rounded">
+            <i class="bi bi-exclamation-triangle-fill text-warning fa-2x"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="progress" style="height: 6px">
+            <div class="progress-bar bg-warning" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div
+      class="card border-start-0 border-top-0 border-bottom-0 border-end-0 border-5 border-danger h-100"
+    >
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-danger text-uppercase mb-1">Crítico</h6>
+            <h2 class="mb-0">
+              {{ grades|selectattr('estoque_atual', 'equalto', 0)|list|length }}
+            </h2>
+            <p class="mb-0 text-muted small">Itens sem estoque</p>
+          </div>
+          <div class="bg-danger bg-opacity-10 p-3 rounded">
+            <i class="bi bi-fire text-danger fa-2x"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="progress" style="height: 6px">
+            {% set criticos = grades|selectattr('estoque_atual', 'equalto',
+            0)|list|length %} {% set percent_criticos = (criticos /
+            grades|length * 100) if grades|length > 0 else 0 %}
+            <div
+              class="progress-bar bg-danger"
+              style="width: {{ percent_criticos }}%"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div
+      class="card border-start-0 border-top-0 border-bottom-0 border-end-0 border-5 border-info h-100"
+    >
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-info text-uppercase mb-1">Valor Investido</h6>
+            <h2 class="mb-0">{{ (total_itens_baixo * 15)|format_currency }}</h2>
+            <p class="mb-0 text-muted small">Custo em estoque baixo</p>
+          </div>
+          <div class="bg-info bg-opacity-10 p-3 rounded">
+            <i class="bi bi-cash-stack text-info fa-2x"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <small class="text-muted"
+            >Custo médio por item: {{ 15|format_currency }}</small
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div
+      class="card border-start-0 border-top-0 border-bottom-0 border-end-0 border-5 border-success h-100"
+    >
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-success text-uppercase mb-1">Reposição</h6>
+            <h2 class="mb-0">{{ total_faltante }}</h2>
+            <p class="mb-0 text-muted small">Unidades necessárias</p>
+          </div>
+          <div class="bg-success bg-opacity-10 p-3 rounded">
+            <i class="bi bi-cart-plus text-success fa-2x"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <a
+            href="{{ url_for('entrada_estoque') }}"
+            class="btn btn-success btn-sm w-100"
+          >
+            <i class="bi bi-truck me-1"></i> Solicitar Compra
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela Principal -->
+<div class="card shadow-sm">
+  <div
+    class="card-header bg-white d-flex justify-content-between align-items-center py-3"
+  >
+    <div>
+      <h5 class="mb-0">
+        <i class="bi bi-clipboard-data me-2"></i>
+        Detalhamento por Item
+      </h5>
+      <small class="text-muted">Ordenado por prioridade de reposição</small>
+    </div>
+    <div class="d-flex align-items-center">
+      <div class="me-3">
+        <span class="badge bg-danger me-2">● Crítico</span>
+        <span class="badge bg-warning me-2">● Alto</span>
+        <span class="badge bg-info">● Médio</span>
+      </div>
+      <span class="badge bg-light text-dark border">
+        {{ grades|length }} itens
+      </span>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    {% if grades %}
+    <div class="table-responsive">
+      <table
+        class="table table-hover table-striped mb-0"
+        id="tabela-estoque-baixo"
+      >
+        <thead class="table-light">
+          <tr>
+            <th width="5%" class="text-center">Id</th>
+            <th width="25%">Produto</th>
+            <th width="10%">Cor/Tamanho</th>
+            <th width="15%" class="text-center">Nível de Estoque</th>
+            <th width="15%" class="text-center">Reposição</th>
+            <th width="15%" class="text-center">Localização</th>
+            <th width="15%" class="text-center">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grade in grades %} {% set faltam = grade.estoque_minimo -
+          grade.estoque_atual %} {% set percentual = (grade.estoque_atual /
+          grade.estoque_minimo * 100) if grade.estoque_minimo > 0 else 0 %} {%
+          set nivel = 'critico' if grade.estoque_atual == 0 else 'alto' if
+          faltam >= 5 else 'medio' %}
+
+          <tr
+            class="align-middle {% if nivel == 'critico' %}table-danger{% elif nivel == 'alto' %}table-warning{% endif %}"
+          >
+            <!-- ID - CORRIGIDO: Agora aparece como #001 -->
+            <td class="text-center">
+              <span class="badge bg-dark"
+                >#{{ "%03d"|format(loop.index) }}</span
+              >
+            </td>
+
+            <!-- Produto - CORRIGIDO COM EFEITO HOVER NA IMAGEM -->
+            <td>
+              <div class="d-flex align-items-start">
+                <!-- ===== THUMBNAIL CORRIGIDO COM EFEITO HOVER DO PDV ===== -->
+                <div
+                  class="imagem-container me-2"
+                  style="width: 50px; height: 50px; flex-shrink: 0"
+                >
+                  {% if grade.produto.imagem %}
+                  <img
+                    src="{{ url_for('uploaded_file', filename='thumb_' + grade.produto.imagem) }}"
+                    class="produto-thumbnail"
+                    style="
+                      width: 50px;
+                      height: 50px;
+                      object-fit: contain;
+                      border: 1px solid #dee2e6;
+                      background-color: #f8f9fa;
+                      border-radius: 4px;
+                      transition: transform 0.2s;
+                      cursor: pointer;
+                    "
+                    alt="{{ grade.produto.descricao }}"
+                    onclick="ampliarImagem(this)"
+                  />
+                  {% else %}
+                  <div
+                    class="d-flex align-items-center justify-content-center"
+                    style="
+                      width: 50px;
+                      height: 50px;
+                      background-color: #f8f9fa;
+                      border-radius: 4px;
+                      border: 1px solid #dee2e6;
+                    "
+                  >
+                    <i
+                      class="bi bi-image text-muted"
+                      style="font-size: 1.5rem"
+                    ></i>
+                  </div>
+                  {% endif %}
+                </div>
+                <!-- ===== FIM DO THUMBNAIL CORRIGIDO ===== -->
+
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">
+                    {{ grade.produto.descricao[:40] }}{% if
+                    grade.produto.descricao|length > 40 %}...{% endif %}
+                  </h6>
+                  <div class="d-flex flex-wrap gap-1">
+                    <span class="badge bg-dark">{{ grade.produto.sku }}</span>
+                    {% if grade.produto.modelo %}
+                    <span class="badge bg-secondary"
+                      >{{ grade.produto.modelo }}</span
+                    >
+                    {% endif %} {% if grade.produto.colecao %}
+                    <span class="badge bg-light text-dark border"
+                      >{{ grade.produto.colecao }}</span
+                    >
+                    {% endif %}
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    <i
+                      class="bi bi-{{ 'gender-male' if grade.produto.genero == 'M' else 'gender-female' if grade.produto.genero == 'F' else 'gender-ambiguous' }} me-1"
+                    ></i>
+                    {{ grade.produto.genero }} • {{ grade.produto.tipo }}
+                  </small>
+                </div>
+              </div>
+            </td>
+
+            <!-- Cor/Tamanho -->
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="me-2">
+                  <div
+                    class="color-circle"
+                    style="background-color: {{ cor_para_hex(grade.cor) if cor_para_hex else '#ccc' }}"
+                  ></div>
+                </div>
+                <div>
+                  <div class="fw-medium">{{ grade.cor }}</div>
+                  <span class="badge bg-dark">{{ grade.tamanho }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Nível de Estoque -->
+            <td class="text-center">
+              <div class="d-flex flex-column align-items-center">
+                <div class="stock-level mb-2">
+                  <span
+                    class="badge {% if nivel == 'critico' %}bg-danger{% elif nivel == 'alto' %}bg-warning{% else %}bg-info{% endif %} fs-6 px-3 py-2"
+                  >
+                    {{ grade.estoque_atual }} / {{ grade.estoque_minimo }}
+                  </span>
+                </div>
+                <div
+                  class="progress w-100"
+                  style="height: 8px; max-width: 150px"
+                >
+                  <div
+                    class="progress-bar {% if percentual < 20 %}bg-danger{% elif percentual < 50 %}bg-warning{% else %}bg-info{% endif %}"
+                    style="width: {{ percentual if percentual <= 100 else 100 }}%"
+                  ></div>
+                </div>
+                <small class="text-muted mt-1"
+                  >{{ "%.0f"|format(percentual) }}% do mínimo</small
+                >
+              </div>
+            </td>
+
+            <!-- Reposição -->
+            <td class="text-center">
+              <div class="d-flex flex-column align-items-center">
+                <span class="badge bg-dark fs-5 mb-2 px-3 py-2">
+                  {{ faltam }}
+                </span>
+                <small class="text-muted">Unidades</small>
+                <div class="mt-2">
+                  <small class="text-success fw-medium">
+                    <i class="bi bi-arrow-up-circle me-1"></i>
+                    {% if grade.produto.custo %} +{{ (faltam *
+                    grade.produto.custo)|format_currency }} {% else %} +{{
+                    (faltam * 15)|format_currency }} {% endif %}
+                  </small>
+                </div>
+              </div>
+            </td>
+
+            <!-- Localização -->
+            <td class="text-center">
+              <div class="d-flex flex-column align-items-center">
+                <span class="badge bg-light text-dark border px-3 py-2 mb-1">
+                  <i class="bi bi-geo-alt me-1"></i>
+                  {{ grade.localizacao or 'Não definida' }}
+                </span>
+                <small class="text-muted">Última movimentação</small>
+                {% set ultima_mov = grade.movimentacoes|sort(attribute='data',
+                reverse=true)|first %} {% if ultima_mov %}
+                <small class="text-muted"
+                  >{{ ultima_mov.data.strftime('%d/%m') if ultima_mov.data else
+                  '--' }}</small
+                >
+                {% endif %}
+              </div>
+            </td>
+
+            <!-- AÇÕES -->
+            <td class="text-center">
+              <div class="d-flex flex-column align-items-center gap-1">
+                <a
+                  href="{{ url_for('entrada_estoque') }}?produto={{ grade.produto_id }}&cor={{ grade.cor|urlencode }}&tamanho={{ grade.tamanho }}"
+                  class="btn btn-sm btn-primary w-100"
+                  title="Repor estoque"
+                >
+                  <i class="bi bi-plus-circle me-1"></i> Repor
+                </a>
+                <div class="d-flex gap-1 w-100 justify-content-center">
+                  <a
+                    href="{{ url_for('detalhe_produto', id=grade.produto_id) }}"
+                    class="btn btn-sm btn-outline-info"
+                    title="Ver detalhes"
+                  >
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a
+                    href="{{ url_for('editar_produto', id=grade.produto_id) }}"
+                    class="btn btn-sm btn-outline-warning"
+                    title="Editar produto"
+                  >
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    onclick="gerarPedidoCompra('{{ grade.produto.sku }}', '{{ grade.cor }}', '{{ grade.tamanho }}', {{ faltam }})"
+                    title="Gerar pedido"
+                  >
+                    <i class="bi bi-file-text"></i>
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Resumo e Ações -->
+    <div class="p-4 border-top">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <div class="alert alert-warning mb-0">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-megaphone-fill me-3 fs-4"></i>
+              <div>
+                <h6 class="alert-heading mb-1">Plano de Ação Recomendado</h6>
+                <p class="mb-0">
+                  <strong>Prioridade 1:</strong> Repor {{ total_faltante }}
+                  unidades • <strong>Produtos críticos:</strong> {{
+                  grades|selectattr('estoque_atual', 'equalto', 0)|list|length
+                  }} • <strong>Prazo sugerido:</strong> 48 horas
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 text-end">
+          <button
+            class="btn btn-success me-2"
+            onclick="gerarRelatorioCompleto()"
+          >
+            <i class="bi bi-file-earmark-text me-1"></i> Relatório
+          </button>
+          <a
+            href="mailto:?subject=Relatório Estoque Baixo&body=Segue lista de {{ grades|length }} itens para reposição"
+            class="btn btn-outline-primary"
+          >
+            <i class="bi bi-envelope me-1"></i> Enviar
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Estado Vazio -->
+    <div class="text-center py-5">
+      <div class="mb-4">
+        <i
+          class="bi bi-check-circle-fill text-success"
+          style="font-size: 4rem"
+        ></i>
+      </div>
+      <h3 class="text-success mb-3">🎉 Estoque Otimizado!</h3>
+      <p class="text-muted mb-4 lead">
+        Todos os produtos estão dentro dos parâmetros de segurança. Continue
+        monitorando para manter essa excelência.
+      </p>
+      <div class="d-flex justify-content-center gap-3">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+          <i class="bi bi-speedometer2 me-1"></i> Voltar ao Dashboard
+        </a>
+        <a href="{{ url_for('entrada_estoque') }}" class="btn btn-primary">
+          <i class="bi bi-plus-circle me-1"></i> Nova Entrada
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if grades %}
+  <div class="card-footer bg-light">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Gerado em {{ now().strftime('%d/%m/%Y %H:%M') if now else '' }} • {{
+          produtos_afetados }} produtos • {{ total_faltante }} unidades para
+          reposição
+        </small>
+      </div>
+      <div class="col-md-6 text-end">
+        <small class="text-muted">
+          Sistema Havaianas • Relatório EBS-{{ now().strftime('%Y%m%d') if now
+          else '' }}
+        </small>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal para ampliar imagem (igual ao PDV) -->
+<div class="modal fade" id="modalImagem" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center p-3">
+        <img
+          src=""
+          class="img-fluid"
+          id="imagemAmpliada"
+          style="
+            max-height: 300px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 5px;
+            background-color: #f8f9fa;
+          "
+        />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    // ========== FUNÇÃO PARA AMPLIAR IMAGEM (igual ao PDV) ==========
+    function ampliarImagem(elemento) {
+        const modalImg = document.getElementById('imagemAmpliada');
+        if (elemento && elemento.src) {
+            modalImg.src = elemento.src;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('modalImagem'));
+        modal.show();
+    }
+
+    // ========== FUNÇÃO PARA CARREGAR MODELOS DA API ==========
+    async function carregarModelosDaAPI() {
+      try {
+        console.log("🔍 Carregando modelos da API...");
+        const response = await fetch('/api/modelos');
+
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        const modelos = await response.json();
+        const select = document.getElementById('filtro-modelo');
+
+        // Limpar options existentes (mantém a primeira)
+        select.innerHTML = '<option value="">Todos Modelos</option>';
+
+        // Adicionar modelos da API
+        modelos.forEach(modelo => {
+          const option = document.createElement('option');
+          option.value = modelo.nome;
+          option.textContent = modelo.nome;
+          select.appendChild(option);
+        });
+
+        console.log(`✅ ${modelos.length} modelos carregados da API`);
+        return true;
+
+      } catch (error) {
+        console.error("❌ Erro ao carregar modelos da API:", error);
+
+        // FALLBACK: Tentar carregar do localStorage se a API falhar
+        try {
+          console.log("⚠️ Tentando fallback para localStorage...");
+          const modelosLS = localStorage.getItem("havaianas_modelos");
+          if (modelosLS) {
+            const modelos = JSON.parse(modelosLS);
+            const select = document.getElementById('filtro-modelo');
+
+            select.innerHTML = '<option value="">Todos Modelos</option>';
+
+            modelos.forEach(modelo => {
+              const option = document.createElement('option');
+              option.value = modelo.nome || modelo;
+              option.textContent = modelo.nome || modelo;
+              select.appendChild(option);
+            });
+
+            console.log(`✅ ${modelos.length} modelos carregados do localStorage (fallback)`);
+          } else {
+            console.log("ℹ️ Nenhum modelo encontrado no localStorage");
+          }
+        } catch (e) {
+          console.error("❌ Erro no fallback do localStorage:", e);
+        }
+
+        return false;
+      }
+    }
+
+    $(document).ready(function() {
+        // Carregar modelos primeiro (AGORA USA A API)
+        carregarModelosDaAPI();
+
+        // Inicializar DataTable com tradução embutida
+  const table = $('#tabela-estoque-baixo').DataTable({
+      language: {
+          "sEmptyTable": "Nenhum registro encontrado",
+          "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+          "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+          "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+          "sInfoPostFix": "",
+          "sInfoThousands": ".",
+          "sLengthMenu": "_MENU_ resultados por página",
+          "sLoadingRecords": "Carregando...",
+          "sProcessing": "Processando...",
+          "sZeroRecords": "Nenhum registro encontrado",
+          "sSearch": "Pesquisar:",
+          "oPaginate": {
+              "sNext": "Próximo",
+              "sPrevious": "Anterior",
+              "sFirst": "Primeiro",
+              "sLast": "Último"
+          },
+          "oAria": {
+              "sSortAscending": ": Ordenar colunas de forma ascendente",
+              "sSortDescending": ": Ordenar colunas de forma descendente"
+          }
+      },
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+      order: [[0, 'asc']],
+      responsive: true,
+      dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
+      buttons: [
+          {
+              extend: 'excel',
+              text: '<i class="bi bi-file-excel me-1"></i> Excel',
+              className: 'btn btn-success btn-sm',
+              title: 'Estoque_Baixo_{{ now().strftime("%Y%m%d") if now else "" }}'
+          },
+          {
+              extend: 'pdf',
+              text: '<i class="bi bi-file-pdf me-1"></i> PDF',
+              className: 'btn btn-danger btn-sm'
+          },
+          {
+              extend: 'print',
+              text: '<i class="bi bi-printer me-1"></i> Imprimir',
+              className: 'btn btn-primary btn-sm'
+          }
+      ]
+  });
+
+        // CONTROLE DE BOTÕES LIMPAR - Mostrar/esconder conforme valor
+
+        // Filtro por urgência
+        $('#filtro-urgencia').on('change', function() {
+            const nivel = $(this).val();
+            const btnLimpar = $('#limpar-urgencia');
+
+            // Mostrar botão se não for "todos"
+            if (nivel !== 'todos') {
+                btnLimpar.show();
+            } else {
+                btnLimpar.hide();
+            }
+
+            // Remove filtro anterior se houver
+            $.fn.dataTable.ext.search.pop();
+
+            if (nivel === 'todos') {
+                table.draw();
+                return;
+            }
+
+            // Define a função de filtro personalizado
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    const row = table.row(dataIndex).node();
+
+                    if (nivel === 'critico') {
+                        return $(row).hasClass('table-danger');
+                    }
+                    else if (nivel === 'alto') {
+                        return $(row).hasClass('table-warning');
+                    }
+                    else if (nivel === 'medio') {
+                        return $(row).hasClass('table-info') ||
+                              (!$(row).hasClass('table-danger') &&
+                                !$(row).hasClass('table-warning'));
+                    }
+                    return true;
+                }
+            );
+
+            table.draw();
+        });
+
+        // FILTRO POR MODELO - Busca pelo badge bg-secondary
+        $('#filtro-modelo').on('change', function() {
+            const modelo = $(this).val();
+            const btnLimpar = $('#limpar-modelo');
+
+            // Mostrar botão se tiver valor
+            if (modelo !== '') {
+                btnLimpar.show();
+            } else {
+                btnLimpar.hide();
+            }
+
+            // Remover filtros anteriores
+            $.fn.dataTable.ext.search.pop();
+
+            if (modelo === '') {
+                table.draw();
+                return;
+            }
+
+            // Filtro personalizado que busca no badge bg-secondary
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                const row = table.row(dataIndex).node();
+                const modeloNaLinha = $(row).find('.badge.bg-secondary').text().trim();
+                return modeloNaLinha === modelo;
+            });
+
+            table.draw();
+        });
+
+        // Filtro por cor
+        $('#filtro-cor').on('keyup', function() {
+            const cor = $(this).val();
+            const btnLimpar = $('#limpar-cor');
+
+            // Mostrar botão se tiver valor
+            if (cor !== '') {
+                btnLimpar.show();
+            } else {
+                btnLimpar.hide();
+            }
+
+            table.column(2).search(this.value).draw();
+        });
+
+        // Filtro por localização
+        $('#filtro-local').on('keyup', function() {
+            const local = $(this).val();
+            const btnLimpar = $('#limpar-local');
+
+            // Mostrar botão se tiver valor
+            if (local !== '') {
+                btnLimpar.show();
+            } else {
+                btnLimpar.hide();
+            }
+
+            table.column(5).search(this.value).draw();
+        });
+
+        // Verificar estado inicial dos botões
+        if ($('#filtro-urgencia').val() !== 'todos') {
+            $('#limpar-urgencia').show();
+        }
+        if ($('#filtro-modelo').val() !== '') {
+            $('#limpar-modelo').show();
+        }
+        if ($('#filtro-cor').val() !== '') {
+            $('#limpar-cor').show();
+        }
+        if ($('#filtro-local').val() !== '') {
+            $('#limpar-local').show();
+        }
+    });
+
+    // Funções para limpar filtros
+    function limparFiltro(tipo) {
+        if (tipo === 'urgencia') {
+            $('#filtro-urgencia').val('todos').trigger('change');
+            $('#limpar-urgencia').hide();
+        } else if (tipo === 'modelo') {
+            $('#filtro-modelo').val('').trigger('change');
+            $('#limpar-modelo').hide();
+        } else if (tipo === 'cor') {
+            $('#filtro-cor').val('').trigger('keyup');
+            $('#limpar-cor').hide();
+        } else if (tipo === 'local') {
+            $('#filtro-local').val('').trigger('keyup');
+            $('#limpar-local').hide();
+        }
+    }
+
+    // Funções de exportação
+    function exportarParaExcel() {
+        alert('Exportando para Excel...');
+        // Implementar exportação real aqui
+    }
+
+    function gerarPedidoCompra(sku, cor, tamanho, quantidade) {
+        const mensagem = `📋 Pedido de Compra\n\n` +
+                        `Produto: ${sku}\n` +
+                        `Cor: ${cor}\n` +
+                        `Tamanho: ${tamanho}\n` +
+                        `Quantidade: ${quantidade} unidades\n` +
+                        `Data: ${new Date().toLocaleDateString('pt-BR')}\n\n` +
+                        `Status: 📝 Pendente`;
+
+        if (confirm(`Gerar pedido para ${quantidade} unidades de ${sku} ${cor} T${tamanho}?`)) {
+            alert('Pedido gerado com sucesso!\n\n' + mensagem);
+            // Aqui você pode implementar o envio para o backend
+        }
+    }
+
+    function gerarRelatorioCompleto() {
+        const totalItens = {{ grades|length }};
+        const totalCriticos = {{ grades|selectattr('estoque_atual', 'equalto', 0)|list|length }};
+        const totalReposicao = {{ total_faltante }};
+
+        const relatorio = `
+        =================================
+        RELATÓRIO DE ESTOQUE BAIXO
+        =================================
+        Data: ${new Date().toLocaleDateString('pt-BR')}
+        Hora: ${new Date().toLocaleTimeString('pt-BR')}
+
+        📊 RESUMO
+        • Itens em alerta: ${totalItens}
+        • Itens críticos: ${totalCriticos}
+        • Unidades para reposição: ${totalReposicao}
+        • Produtos afetados: {{ produtos_afetados }}
+
+        ⚠️ RECOMENDAÇÕES
+        1. Priorizar reposição de itens críticos
+        2. Revisar estoque mínimo dos produtos
+        3. Avaliar rotatividade dos itens
+        4. Planejar compras estratégicas
+
+        =================================
+        Sistema Havaianas - Controle de Estoque
+        =================================
+        `;
+
+        alert('Relatório gerado!\n\n' + relatorio);
+    }
+
+    // Função para formatação brasileira
+    function formatarMoedaBrasileira(valor) {
+        // Converter para número se for string
+        let numero = typeof valor === 'string' ? parseFloat(valor) : valor;
+
+        // Verificar se é um número válido
+        if (isNaN(numero)) {
+            return 'R$ 0,00';
+        }
+
+        // Formatar com separador de milhar e decimal brasileiro
+        return numero.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+</script>
+
+<style>
+  /* ===== ESTILO PARA IMAGENS - IGUAL AO PDV ===== */
+  .produto-thumbnail {
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+
+  .produto-thumbnail:hover {
+    transform: scale(2);
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Container da imagem */
+  .imagem-container {
+    display: inline-block;
+    overflow: visible;
+  }
+
+  /* Estilos Personalizados */
+  .color-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    display: inline-block;
+  }
+
+  .stock-level .badge {
+    min-width: 80px;
+  }
+
+  .table-danger {
+    background: linear-gradient(
+      90deg,
+      rgba(220, 53, 69, 0.05) 0%,
+      rgba(220, 53, 69, 0.02) 100%
+    );
+    border-left: 4px solid #dc3545;
+  }
+
+  .table-warning {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 193, 7, 0.05) 0%,
+      rgba(255, 193, 7, 0.02) 100%
+    );
+    border-left: 4px solid #ffc107;
+  }
+
+  .progress {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    border-radius: 10px;
+  }
+
+  /* Cards com gradiente */
+  .card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Estado vazio */
+  .empty-state {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  }
+
+  /* ESTILOS PARA BOTÕES - CORRIGIDO: Igual ao fornecedor */
+  .d-flex.gap-1 {
+    gap: 0.25rem !important;
+  }
+
+  .btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+  }
+  .btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+  }
+
+  .btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+  }
+  .btn-outline-warning:hover {
+    color: #000;
+    background-color: #ffc107;
+    border-color: #ffc107;
+  }
+
+  .btn-outline-secondary {
+    color: #6c757d;
+    border-color: #6c757d;
+  }
+  .btn-outline-secondary:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+  }
+
+  .btn-primary {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  .btn-primary:hover {
+    color: #fff;
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+  }
+
+  /* Tamanho dos botões */
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+  }
+
+  /* Responsividade */
+  @media (max-width: 768px) {
+    .stock-level .badge {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.6rem;
+    }
+  }
+
+  /* Animações */
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .table-danger {
+    animation: pulse 2s infinite;
+  }
+
+  /* Estilos para impressão */
+  @media print {
+    .btn,
+    .no-print,
+    .card-footer,
+    .alert,
+    .filtros {
+      display: none !important;
+    }
+
+    .produto-thumbnail:hover {
+      transform: none; /* Remove hover na impressão */
+    }
+
+    .card {
+      border: 2px solid #333 !important;
+      box-shadow: none !important;
+    }
+
+    .card-header {
+      background: #f8f9fa !important;
+      color: #333 !important;
+      border-bottom: 2px solid #333 !important;
+    }
+
+    .table th {
+      background: #f8f9fa !important;
+      color: #333 !important;
+      border: 1px solid #333 !important;
+    }
+
+    .table td {
+      border: 1px solid #333 !important;
+    }
+
+    .badge {
+      border: 1px solid #ccc !important;
+    }
+  }
+</style>
+{% endblock %}

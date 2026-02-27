@@ -1,0 +1,618 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Usuários - Sistema Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-people me-2"></i>Gerenciar Usuários
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('novo_usuario') }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-person-plus me-1"></i> Novo Usuário
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button class="dropdown-item" onclick="exportarCSV()">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar CSV
+            </button>
+        </li>
+        <li>
+            <button class="dropdown-item" onclick="imprimirLista()">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Cards de Estatísticas - 3 CARDS -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total</h6>
+                        <h2 class="mb-0">{{ total_usuarios }}</h2>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Ativos</h6>
+                        <h2 class="mb-0">{{ usuarios_ativos }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Inativos</h6>
+                        <h2 class="mb-0">{{ usuarios_inativos }}</h2>
+                    </div>
+                    <i class="bi bi-pause-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros - COM BOTÕES LIMPAR INDIVIDUAIS -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('listar_usuarios') }}" id="formFiltros">
+            <div class="row g-0">
+                <!-- Busca -->
+                <div class="col-md-9 pe-2">
+                    <label class="form-label fw-bold"><i class="bi bi-search me-1"></i>Buscar Usuário</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" class="form-control" name="q" id="buscaUsuario"
+                               placeholder="Nome, usuário ou e-mail..." 
+                               value="{{ busca or '' }}"
+                               autocomplete="off">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('buscaUsuario')" title="Limpar busca" style="display: none;" id="limpar-buscaUsuario">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i> Busca em tempo real
+                    </small>
+                </div>
+                
+                <!-- Status -->
+                <div class="col-md-3">
+                    <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i>Status</label>
+                    <div class="input-group">
+                        <select class="form-select" name="status" id="status" onchange="this.form.submit()">
+                            <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+                            <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativos</option>
+                            <option value="admins" {% if status == 'admins' %}selected{% endif %}>Administradores</option>
+                            <option value="operadores" {% if status == 'operadores' %}selected{% endif %}>Operadores</option>
+                            <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('status')" title="Limpar filtro" style="display: none;" id="limpar-status">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Status atual dos filtros (igual aos outros templates) -->
+        <div class="mt-2 text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Mostrando: 
+            <strong>
+                {% if status == 'ativos' %}Usuários Ativos
+                {% elif status == 'inativos' %}Usuários Inativos
+                {% elif status == 'admins' %}Administradores
+                {% elif status == 'operadores' %}Operadores
+                {% else %}Todos os usuários
+                {% endif %}
+            </strong>
+            {% if busca %}
+                - Busca: "{{ busca }}"
+            {% endif %}
+            <span class="badge bg-secondary ms-2">{{ usuarios|length }} resultado(s)</span>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Usuários - AGORA COM DATATABLES -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-table me-2"></i>Lista de Usuários</h5>
+        <span class="badge bg-secondary">{{ usuarios|length }} usuário(s) encontrado(s)</span>
+    </div>
+    <div class="card-body p-0">
+        {% if usuarios %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0" id="tabelaUsuarios">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">Id</th>
+                        <th width="15%">Usuário</th>
+                        <th width="15%">Nome</th>
+                        <th width="20%">Email</th>
+                        <th width="10%">Nível</th>
+                        <th width="8%">Status</th>
+                        <th width="15%">Último Acesso</th>
+                        <th width="12%">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <!-- ID IGUAL AOS OUTROS TEMPLATES - #001 -->
+                        <td><span class="badge bg-dark">#{{ "%03d"|format(usuario.id) }}</span></td>
+                        
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2 {% if not usuario.ativo %}bg-secondary{% elif usuario.admin %}bg-danger{% else %}bg-info{% endif %}">
+                                    <span class="text-white">{{ usuario.username[:1]|upper }}</span>
+                                </div>
+                                <div>
+                                    <strong>{{ usuario.username }}</strong>
+                                    {% if usuario.id == session['usuario_id'] %}
+                                    <br><small class="text-muted">(Você)</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ usuario.nome or '---' }}</td>
+                        <td>
+                            {% if usuario.email %}
+                            <i class="bi bi-envelope me-1"></i>{{ usuario.email }}
+                            {% else %}
+                            <span class="text-muted">---</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.admin %}
+                            <span class="badge bg-danger">Administrador</span>
+                            {% else %}
+                            <span class="badge bg-info">Operador</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.ativo %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {% if usuario.ultimo_acesso %}
+                                    <i class="bi bi-clock-history me-1"></i>{{ usuario.ultimo_acesso.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                    <i class="bi bi-dash me-1"></i>Nunca
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <!-- Visualizar - aparece para todos -->
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="verDetalhes('{{ usuario.id }}')" title="Visualizar">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                
+                                <!-- Editar - NÃO aparece para o próprio usuário -->
+                                {% if usuario.id != session['usuario_id'] %}
+                                <a href="{{ url_for('editar_usuario', id=usuario.id) }}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                
+                                <form method="POST" action="{{ url_for('toggle_usuario', id=usuario.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ 'success' if not usuario.ativo else 'secondary' }}" 
+                                            title="{{ 'Ativar' if not usuario.ativo else 'Inativar' }}">
+                                        <i class="bi bi-{{ 'play' if not usuario.ativo else 'pause' }}-circle"></i>
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('resetar_senha_usuario', id=usuario.id) }}" 
+                                      class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja resetar a senha do usuário {{ usuario.username }} para 123456?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Resetar senha">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+
+                                <form method="POST" action="{{ url_for('excluir_usuario', id=usuario.id) }}" 
+                                      class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja excluir permanentemente o usuário {{ usuario.username }}? Esta ação não pode ser desfeita.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people display-1 text-muted"></i>
+            <h4 class="mt-3">Nenhum usuário encontrado</h4>
+            <p class="text-muted">
+                {% if busca %}
+                    Nenhum usuário corresponde à busca "{{ busca }}".<br>
+                    <a href="{{ url_for('listar_usuarios', status=status) }}" class="btn btn-link">Limpar busca</a>
+                {% elif status == 'inativos' %}
+                    Não há usuários inativos no momento.
+                {% elif status == 'admins' %}
+                    Não há administradores cadastrados.
+                {% elif status == 'operadores' %}
+                    Não há operadores cadastrados.
+                {% elif status == 'todos' and not usuarios %}
+                    Nenhum usuário cadastrado ainda.
+                {% else %}
+                    Comece cadastrando seu primeiro usuário.
+                {% endif %}
+            </p>
+            {% if not busca %}
+            <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-person-plus me-2"></i>Novo Usuário
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Detalhes do Usuário -->
+<div class="modal fade" id="modalDetalhes" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-person me-2"></i>Detalhes do Usuário</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalhesContent">
+                <div class="text-center">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <a href="#" id="btnEditarModal" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i> Editar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variável oculta para passar o ID do usuário logado -->
+<input type="hidden" id="usuarioLogadoId" value="{{ session['usuario_id'] }}">
+{% endblock %}
+
+{% block extra_js %}
+<!-- Adicionar DataTables CSS e JS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+// ============================================
+// FUNÇÕES PARA USUÁRIOS
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable com tradução embutida
+    $('#tabelaUsuarios').DataTable({
+        language: {
+            "sEmptyTable": "Nenhum registro encontrado",
+            "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+            "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "_MENU_ resultados por página",
+            "sLoadingRecords": "Carregando...",
+            "sProcessing": "Processando...",
+            "sZeroRecords": "Nenhum registro encontrado",
+            "sSearch": "Pesquisar:",
+            "oPaginate": {
+                "sNext": "Próximo",
+                "sPrevious": "Anterior",
+                "sFirst": "Primeiro",
+                "sLast": "Último"
+            },
+            "oAria": {
+                "sSortAscending": ": Ordenar colunas de forma ascendente",
+                "sSortDescending": ": Ordenar colunas de forma descendente"
+            }
+        },
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        order: [[0, 'asc']],
+        responsive: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip'
+    });
+    
+    // BUSCA EM TEMPO REAL
+    const buscaInput = document.getElementById('buscaUsuario');
+    const formFiltros = document.getElementById('formFiltros');
+    let timeoutId;
+    
+    if (buscaInput) {
+        buscaInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                formFiltros.submit();
+            }, 600);
+            verificarBotaoLimpar('buscaUsuario', this.value);
+        });
+    }
+    
+    // Listener para o select de status
+    document.getElementById('status').addEventListener('change', function() {
+        verificarBotaoLimpar('status', this.value);
+    });
+    
+    // Verificar estado inicial dos botões
+    verificarBotaoLimpar('buscaUsuario', document.getElementById('buscaUsuario')?.value || '');
+    verificarBotaoLimpar('status', document.getElementById('status')?.value || '');
+});
+
+// Função para verificar se deve mostrar botão limpar
+function verificarBotaoLimpar(campoId, valor) {
+    const btnLimpar = document.getElementById(`limpar-${campoId}`);
+    if (btnLimpar) {
+        if (campoId === 'status') {
+            // Só mostra botão se não for 'ativos' (padrão da página)
+            if (valor && valor !== 'ativos') {
+                btnLimpar.style.display = 'block';
+            } else {
+                btnLimpar.style.display = 'none';
+            }
+        } else if (campoId === 'buscaUsuario') {
+            // Só mostra botão se tiver valor
+            if (valor && valor !== '') {
+                btnLimpar.style.display = 'block';
+            } else {
+                btnLimpar.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Função para limpar filtro individual
+function limparFiltroIndividual(campoId) {
+    const campo = document.getElementById(campoId);
+    if (campo) {
+        if (campoId === 'buscaUsuario') {
+            campo.value = '';
+        } else if (campoId === 'status') {
+            campo.value = 'ativos'; // Status volta para 'ativos' (padrão da página)
+        }
+        campo.dispatchEvent(new Event('change'));
+        document.getElementById(`limpar-${campoId}`).style.display = 'none';
+        
+        // Submeter o formulário
+        document.getElementById('formFiltros').submit();
+    }
+}
+
+// Ver detalhes do usuário
+function verDetalhes(id) {
+    const modal = new bootstrap.Modal(document.getElementById('modalDetalhes'));
+    modal.show();
+    
+    // Pegar ID do usuário logado do input oculto
+    const usuarioLogadoId = parseInt(document.getElementById('usuarioLogadoId').value);
+    
+    fetch(`/api/usuarios/${id}`)
+        .then(response => response.json())
+        .then(usuario => {
+            document.getElementById('detalhesContent').innerHTML = gerarHtmlDetalhes(usuario);
+            
+            // Configurar o botão Editar - só aparece se NÃO for o próprio usuário
+            const btnEditar = document.getElementById('btnEditarModal');
+            if (usuario.id === usuarioLogadoId) {
+                btnEditar.style.display = 'none'; // Esconde para o próprio usuário
+            } else {
+                btnEditar.style.display = 'inline-block'; // Mostra para outros
+                btnEditar.href = `/usuario/editar/${usuario.id}`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('detalhesContent').innerHTML = '<div class="alert alert-danger">Erro ao carregar dados do usuário.</div>';
+        });
+}
+
+// Gerar HTML dos detalhes
+function gerarHtmlDetalhes(u) {
+    let html = '<div class="row">';
+    
+    html += '<div class="col-md-6"><div class="card mb-3"><div class="card-header bg-light">Dados do Usuário</div><div class="card-body">';
+    html += '<p><strong>Usuário:</strong> ' + (u.username || '') + '</p>';
+    html += '<p><strong>Nome:</strong> ' + (u.nome || '-') + '</p>';
+    html += '<p><strong>E-mail:</strong> ' + (u.email || '-') + '</p>';
+    html += '<p><strong>Telefone:</strong> ' + (u.telefone || 'Não informado') + '</p>';
+    html += '<p><strong>Nível:</strong> ' + (u.admin ? 'Administrador' : 'Operador') + '</p>';
+    html += '<p><strong>Status:</strong> ' + (u.ativo ? 'Ativo' : 'Inativo') + '</p>';
+    html += '</div></div></div>';
+    
+    html += '<div class="col-md-6"><div class="card mb-3"><div class="card-header bg-light">Acessos</div><div class="card-body">';
+    html += '<p><strong>Cadastro:</strong> ' + (u.data_cadastro || '-') + '</p>';
+    html += '<p><strong>Último acesso:</strong> ' + (u.ultimo_acesso || 'Nunca') + '</p>';
+    html += '</div></div></div>';
+    
+    html += '</div>';
+    return html;
+}
+
+// Exportar CSV
+function exportarCSV() {
+    alert('Funcionalidade de exportação CSV em desenvolvimento');
+}
+
+// Imprimir lista
+function imprimirLista() {
+    window.print();
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+.avatar-circle.bg-danger {
+    background-color: #dc3545;
+}
+.avatar-circle.bg-info {
+    background-color: #0dcaf0;
+}
+.avatar-circle.bg-secondary {
+    background-color: #6c757d;
+}
+.table td {
+    vertical-align: middle;
+}
+.opacity-50 {
+    opacity: 0.5;
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+.btn-group .btn {
+    margin: 0;
+}
+.fw-bold {
+    font-weight: 600;
+}
+.input-group .btn-outline-secondary {
+    border-color: #dee2e6;
+}
+.text-primary {
+    color: #0d6efd !important;
+}
+/* Estilo para o DataTables - IGUAL AOS OUTROS TEMPLATES */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 1rem;
+}
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.2rem;
+    border: 1px solid #dee2e6;
+}
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.25rem 0.5rem;
+    margin: 0 2px;
+    border-radius: 0.2rem;
+    border: 1px solid #dee2e6;
+    color: #0d6efd;
+    cursor: pointer;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background-color: #0d6efd;
+    color: white !important;
+    border-color: #0d6efd;
+}
+/* Ajuste fino para alinhamento */
+.row.g-0 {
+    margin-left: 0;
+    margin-right: 0;
+}
+.pe-2 {
+    padding-right: 0.5rem !important;
+}
+
+/* ===== AJUSTE PARA TABELA SEM BARRA DE ROLAGEM ===== */
+#tabelaUsuarios {
+    width: 100%;
+    table-layout: auto;
+}
+
+#tabelaUsuarios th,
+#tabelaUsuarios td {
+    padding: 12px 8px;
+    white-space: nowrap;
+}
+
+#tabelaUsuarios td:last-child {
+    white-space: normal;
+}
+
+@media (max-width: 992px) {
+    #tabelaUsuarios th,
+    #tabelaUsuarios td {
+        padding: 8px 4px;
+        font-size: 0.9rem;
+    }
+    
+    .btn-sm {
+        padding: 0.2rem 0.3rem;
+        font-size: 0.8rem;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.4rem;
+    }
+    
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+}
+
+@media print {
+    .btn-group, .btn, .dropdown, .modal {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

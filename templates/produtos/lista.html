@@ -1,0 +1,560 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Produtos - Havaianas{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-box-seam me-2"></i>Produtos Cadastrados
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-items-center">
+    <!-- Filtro por Status COM BOTÃO LIMPAR -->
+    <div class="me-3">
+        <form method="GET" action="{{ url_for('produtos') }}" id="formFiltro" class="d-flex align-items-center">
+            <input type="hidden" name="q" value="{{ busca }}">
+            <div class="input-group" style="width: 160px;">
+                <select class="form-select form-select-sm" name="filtro" id="filtroStatus" onchange="this.form.submit()">
+                    <option value="ativos" {% if filtro == 'ativos' %}selected{% endif %}>✅ Ativos</option>
+                    <option value="inativos" {% if filtro == 'inativos' %}selected{% endif %}>❌ Inativos</option>
+                    <option value="todos" {% if filtro == 'todos' %}selected{% endif %}>📋 Todos</option>
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('filtroStatus')" title="Limpar filtro" style="display: none;" id="limpar-filtroStatus">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Botão Novo Produto -->
+    <a href="{{ url_for('novo_produto') }}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle me-2"></i> Novo Produto
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-white">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">
+                    Lista de Produtos
+                    {% if filtro == 'ativos' %}
+                    <span class="badge bg-success ms-2">Mostrando ativos</span>
+                    {% elif filtro == 'inativos' %}
+                    <span class="badge bg-warning ms-2">Mostrando inativos</span>
+                    {% else %}
+                    <span class="badge bg-info ms-2">Mostrando todos</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="col-md-6">
+                <!-- BUSCA INTELIGENTE COM SCANNER AUTOMÁTICO E BOTÃO LIMPAR -->
+                <form method="GET" action="{{ url_for('produtos') }}" id="formBusca">
+                    <input type="hidden" name="filtro" value="{{ filtro }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               name="q"
+                               id="buscaProdutos" 
+                               placeholder="Digite SKU, descrição, modelo ou coleção..."
+                               value="{{ busca }}"
+                               aria-label="Buscar produtos">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('buscaProdutos')" title="Limpar busca" style="display: none;" id="limpar-buscaProdutos">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </form>
+                <small class="text-muted mt-1 d-block">
+                    <i class="bi bi-info-circle"></i> Scanner automático ativo • Digite ou use leitor de código
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Contadores -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <small class="text-muted">Total encontrado:</small>
+                        <div class="h5 mb-0">{{ produtos|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <small class="text-muted">Ativos:</small>
+                        <div class="h5 mb-0 text-success">
+                            {{ produtos|selectattr('ativo', 'equalto', true)|list|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <small class="text-muted">Inativos:</small>
+                        <div class="h5 mb-0 text-danger">
+                            {{ produtos|selectattr('ativo', 'equalto', false)|list|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <small class="text-muted">Com grades:</small>
+                        <div class="h5 mb-0 text-primary">
+                            {{ produtos|selectattr('grades', '!=', [])|list|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if produtos %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="tabelaProdutos">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>SKU</th>
+                        <th>Descrição</th>
+                        <th>Modelo</th>
+                        <th>Coleção</th>
+                        <th>Gênero</th>
+                        <th>Preço</th>
+                        <th>Grades</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for produto in produtos %}
+                    <tr class="{% if not produto.ativo %}table-light text-muted{% endif %}">
+                        <!-- Status com ícone -->
+                        <td>
+                            {% if produto.ativo %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i> Ativo
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i> Inativo
+                            </span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- SKU -->
+                        <td>
+                            <span class="badge {% if produto.ativo %}bg-secondary{% else %}bg-light text-dark{% endif %}">
+                                {{ produto.sku }}
+                            </span>
+                        </td>
+                        
+                        <!-- Descrição -->
+                        <td>
+                            {% if not produto.ativo %}
+                            <i class="bi bi-eye-slash text-muted me-1" title="Produto inativo"></i>
+                            {% endif %}
+                            {{ produto.descricao }}
+                        </td>
+                        
+                        <!-- Modelo -->
+                        <td>{{ produto.modelo }}</td>
+                        
+                        <!-- Coleção -->
+                        <td>{{ produto.colecao or '-' }}</td>
+                        
+                        <!-- Gênero -->
+                        <td>{{ produto.genero }}</td>
+                        
+                        <!-- Preço -->
+                        <td class="text-success fw-bold">
+                            R$ {{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        </td>
+                        
+                        <!-- Grades -->
+                        <td>
+                            <span class="badge {% if produto.ativo %}bg-info{% else %}bg-light text-dark{% endif %}">
+                                {{ produto.grades|length }} grades
+                            </span>
+                        </td>
+                        
+                        <!-- Ações -->
+                        <td class="text-end">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <!-- Visualizar -->
+                                <a href="{{ url_for('detalhe_produto', id=produto.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Visualizar detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                
+                                <!-- Matriz de Estoque -->
+                                {% if produto.grades|length > 0 %}
+                                <a href="{{ url_for('matriz_estoque', produto_id=produto.id) }}" 
+                                   class="btn btn-sm btn-outline-info" title="Matriz de estoque">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled title="Sem grades cadastradas">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                </button>
+                                {% endif %}
+                                
+                                <!-- Editar -->
+                                <a href="{{ url_for('editar_produto', id=produto.id) }}" 
+                                   class="btn btn-sm btn-outline-warning" title="Editar produto">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                
+                                <!-- Ativar/Desativar -->
+                                <form method="POST" action="{{ url_for('toggle_produto_status', id=produto.id) }}" 
+                                      class="d-inline">
+                                    <button type="submit" class="btn btn-sm {% if produto.ativo %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                            title="{% if produto.ativo %}Desativar produto{% else %}Ativar produto{% endif %}">
+                                        <i class="bi bi-power"></i>
+                                    </button>
+                                </form>
+                                
+                                <!-- Excluir -->
+                                {% if produto.ativo %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        title="Excluir produto"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalExcluir{{ produto.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        disabled
+                                        title="Produto inativo - ative primeiro">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Modal de Exclusão (só aparece se produto ativo) -->
+                            {% if produto.ativo %}
+                            <div class="modal fade" id="modalExcluir{{ produto.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-danger">
+                                                <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-danger">
+                                                <h6><i class="bi bi-exclamation-octagon me-2"></i>Atenção!</h6>
+                                                Esta ação <strong>não pode ser desfeita</strong>.
+                                            </div>
+                                            
+                                            <p>Você está prestes a excluir permanentemente:</p>
+                                            
+                                            <div class="card border-warning">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ produto.descricao }}</h6>
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <small class="text-muted">SKU:</small><br>
+                                                            <strong>{{ produto.sku }}</strong>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Modelo:</small><br>
+                                                            <strong>{{ produto.modelo }}</strong>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mt-2">
+                                                        <div class="col-12">
+                                                            <small class="text-muted">Preço:</small><br>
+                                                            <strong class="text-success">R$ {{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="confirmExclusao{{ produto.id }}" 
+                                                           onchange="document.getElementById('btnExcluir{{ produto.id }}').disabled = !this.checked">
+                                                    <label class="form-check-label" for="confirmExclusao{{ produto.id }}">
+                                                        Confirmo que desejo excluir este produto permanentemente
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                <i class="bi bi-x-circle me-1"></i> Cancelar
+                                            </button>
+                                            <form method="POST" action="{{ url_for('excluir_produto', id=produto.id) }}" 
+                                                  id="formExcluir{{ produto.id }}">
+                                                <button type="submit" class="btn btn-danger" id="btnExcluir{{ produto.id }}" disabled>
+                                                    <i class="bi bi-trash me-1"></i> Excluir Permanentemente
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Estatísticas finais -->
+        <div class="mt-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Total: {{ produtos|length }} produtos
+                        ({{ produtos|selectattr('ativo', 'equalto', true)|list|length }} ativos,
+                        {{ produtos|selectattr('ativo', 'equalto', false)|list|length }} inativos)
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <!-- Links rápidos removidos pois agora temos o select -->
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-box-seam display-1 text-muted mb-3"></i>
+            <h4>Nenhum produto encontrado</h4>
+            <p class="text-muted">
+                {% if filtro == 'inativos' %}
+                Não há produtos inativos no sistema.
+                {% elif filtro == 'ativos' %}
+                Não há produtos ativos no sistema.
+                {% else %}
+                Não há produtos cadastrados no sistema.
+                {% endif %}
+            </p>
+            <div class="mt-3">
+                <a href="{{ url_for('novo_produto') }}" class="btn btn-success me-2">
+                    <i class="bi bi-plus-circle me-2"></i> Cadastrar Produto
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Adicionar DataTables CSS e JS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+// SCANNER AUTOMÁTICO - Submeter formulário ao digitar
+document.addEventListener('DOMContentLoaded', function() {
+    const campoBusca = document.getElementById('buscaProdutos');
+    const formBusca = document.getElementById('formBusca');
+    
+    if (campoBusca) {
+        // Submeter ao digitar (após pausa)
+        let timeoutBusca;
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutBusca);
+            timeoutBusca = setTimeout(() => {
+                formBusca.submit();
+            }, 600);
+            verificarBotaoLimpar('buscaProdutos', this.value);
+        });
+        
+        // Scanner (Enter)
+        campoBusca.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                formBusca.submit();
+            }
+        });
+    }
+    
+    // Listener para o select de status
+    document.getElementById('filtroStatus').addEventListener('change', function() {
+        verificarBotaoLimpar('filtroStatus', this.value);
+    });
+    
+    // Verificar estado inicial dos botões
+    verificarBotaoLimpar('buscaProdutos', document.getElementById('buscaProdutos')?.value || '');
+    verificarBotaoLimpar('filtroStatus', document.getElementById('filtroStatus')?.value || '');
+    
+    // Inicializar DataTable - IGUAL AO RELATÓRIO DE VENDAS
+// Inicializar DataTable com tradução embutida
+    $('#tabelaProdutos').DataTable({
+        language: {
+            "sEmptyTable": "Nenhum registro encontrado",
+            "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+            "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "_MENU_ resultados por página",
+            "sLoadingRecords": "Carregando...",
+            "sProcessing": "Processando...",
+            "sZeroRecords": "Nenhum registro encontrado",
+            "sSearch": "Pesquisar:",
+            "oPaginate": {
+                "sNext": "Próximo",
+                "sPrevious": "Anterior",
+                "sFirst": "Primeiro",
+                "sLast": "Último"
+            },
+            "oAria": {
+                "sSortAscending": ": Ordenar colunas de forma ascendente",
+                "sSortDescending": ": Ordenar colunas de forma descendente"
+            }
+        },
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        order: [[0, 'asc']],
+        responsive: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip'
+    });
+});
+
+// Função para verificar se deve mostrar botão limpar
+function verificarBotaoLimpar(campoId, valor) {
+    const btnLimpar = document.getElementById(`limpar-${campoId}`);
+    if (btnLimpar) {
+        if (campoId === 'filtroStatus') {
+            // Só mostra botão se não for 'ativos' (padrão da página)
+            if (valor && valor !== 'ativos') {
+                btnLimpar.style.display = 'block';
+            } else {
+                btnLimpar.style.display = 'none';
+            }
+        } else if (campoId === 'buscaProdutos') {
+            // Só mostra botão se tiver valor
+            if (valor && valor !== '') {
+                btnLimpar.style.display = 'block';
+            } else {
+                btnLimpar.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Função para limpar filtro individual
+function limparFiltroIndividual(campoId) {
+    const campo = document.getElementById(campoId);
+    if (campo) {
+        if (campoId === 'buscaProdutos') {
+            campo.value = '';
+            document.getElementById('formBusca').submit();
+        } else if (campoId === 'filtroStatus') {
+            campo.value = 'ativos'; // Status volta para 'ativos' (padrão da página)
+            campo.dispatchEvent(new Event('change'));
+            document.getElementById('formFiltro').submit();
+        }
+        document.getElementById(`limpar-${campoId}`).style.display = 'none';
+    }
+}
+
+</script>
+
+<style>
+/* Estilo para botões com espaçamento igual aos outros templates */
+.d-flex.gap-1 {
+    gap: 0.25rem !important;
+}
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+/* Efeito hover nas linhas - IGUAL AO RELATÓRIO DE VENDAS */
+#tabelaProdutos tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Estilo para os botões de ação - IGUAL AO RELATÓRIO DE VENDAS */
+.btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+.btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+
+.btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+}
+.btn-outline-warning:hover {
+    color: #000;
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+}
+.btn-outline-success:hover {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.btn-outline-secondary {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+.btn-outline-secondary:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+}
+.btn-success:hover {
+    color: #fff;
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+</style>
+{% endblock %}
