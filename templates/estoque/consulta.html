@@ -290,6 +290,33 @@
     color: white !important;
     border-color: #0d6efd;
 }
+/* ===== CORREÇÃO DA BOLINHA DE COR ===== */
+#tabelaEstoque td:nth-child(2) {
+    white-space: nowrap; /* Impede quebra de linha */
+}
+
+#tabelaEstoque td:nth-child(2) .d-flex {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+}
+
+#tabelaEstoque td:nth-child(2) .color-circle {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important; /* FORÇA largura mínima */
+    min-height: 20px !important; /* FORÇA altura mínima */
+    border-radius: 50% !important;
+    flex-shrink: 0 !important; /* NÃO deixa a bolinha encolher */
+}
+
+#tabelaEstoque td:nth-child(2) span:not(.color-circle) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Limita o texto */
+    display: inline-block;
+}
 </style>
 
 <script>

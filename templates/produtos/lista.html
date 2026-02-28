@@ -49,28 +49,31 @@
                 </h5>
             </div>
             <div class="col-md-6">
-                <!-- BUSCA INTELIGENTE COM SCANNER AUTOMÁTICO E BOTÃO LIMPAR -->
-                <form method="GET" action="{{ url_for('produtos') }}" id="formBusca">
-                    <input type="hidden" name="filtro" value="{{ filtro }}">
-                    <div class="input-group">
-                        <span class="input-group-text bg-light">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" 
-                               class="form-control" 
-                               name="q"
-                               id="buscaProdutos" 
-                               placeholder="Digite SKU, descrição, modelo ou coleção..."
-                               value="{{ busca }}"
-                               aria-label="Buscar produtos">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparFiltroIndividual('buscaProdutos')" title="Limpar busca" style="display: none;" id="limpar-buscaProdutos">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-                </form>
+                <!-- BUSCA INTELIGENTE - IGUAL CONSULTA -->
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control" 
+                           id="buscaProdutos" 
+                           placeholder="Digite SKU, descrição, modelo ou coleção..."
+                           value="{{ busca }}"
+                           aria-label="Buscar produtos"
+                           autocomplete="off">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="limparBusca()" title="Limpar busca" style="display: none;" id="limpar-busca">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
                 <small class="text-muted mt-1 d-block">
                     <i class="bi bi-info-circle"></i> Scanner automático ativo • Digite ou use leitor de código
                 </small>
+                
+                <!-- Formulário oculto para manter compatibilidade -->
+                <form method="GET" id="formBuscaOculto" style="display: none;">
+                    <input type="hidden" name="filtro" value="{{ filtro }}">
+                    <input type="hidden" name="q" id="inputBuscaOculto" value="{{ busca }}">
+                </form>
             </div>
         </div>
     </div>
@@ -82,7 +85,7 @@
                 <div class="card bg-light">
                     <div class="card-body py-2">
                         <small class="text-muted">Total encontrado:</small>
-                        <div class="h5 mb-0">{{ produtos|length }}</div>
+                        <div class="h5 mb-0" id="total-encontrado">{{ produtos|length }}</div>
                     </div>
                 </div>
             </div>
@@ -90,7 +93,7 @@
                 <div class="card bg-light">
                     <div class="card-body py-2">
                         <small class="text-muted">Ativos:</small>
-                        <div class="h5 mb-0 text-success">
+                        <div class="h5 mb-0 text-success" id="total-ativos">
                             {{ produtos|selectattr('ativo', 'equalto', true)|list|length }}
                         </div>
                     </div>
@@ -100,7 +103,7 @@
                 <div class="card bg-light">
                     <div class="card-body py-2">
                         <small class="text-muted">Inativos:</small>
-                        <div class="h5 mb-0 text-danger">
+                        <div class="h5 mb-0 text-danger" id="total-inativos">
                             {{ produtos|selectattr('ativo', 'equalto', false)|list|length }}
                         </div>
                     </div>
@@ -222,14 +225,14 @@
                                     </button>
                                 </form>
                                 
-                                <!-- Excluir -->
+                                <!-- Excluir - COM CONFIRM ALERT -->
                                 {% if produto.ativo %}
-                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        title="Excluir produto"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#modalExcluir{{ produto.id }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                <form method="POST" action="{{ url_for('excluir_produto', id=produto.id) }}" class="d-inline" 
+                                      onsubmit="return confirm('Tem certeza que deseja excluir o produto {{ produto.descricao }}? Esta ação não pode ser desfeita.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir produto">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                                 {% else %}
                                 <button type="button" class="btn btn-sm btn-outline-secondary" 
                                         disabled
@@ -238,73 +241,6 @@
                                 </button>
                                 {% endif %}
                             </div>
-                            
-                            <!-- Modal de Exclusão (só aparece se produto ativo) -->
-                            {% if produto.ativo %}
-                            <div class="modal fade" id="modalExcluir{{ produto.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title text-danger">
-                                                <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="alert alert-danger">
-                                                <h6><i class="bi bi-exclamation-octagon me-2"></i>Atenção!</h6>
-                                                Esta ação <strong>não pode ser desfeita</strong>.
-                                            </div>
-                                            
-                                            <p>Você está prestes a excluir permanentemente:</p>
-                                            
-                                            <div class="card border-warning">
-                                                <div class="card-body">
-                                                    <h6 class="card-title">{{ produto.descricao }}</h6>
-                                                    <div class="row">
-                                                        <div class="col-6">
-                                                            <small class="text-muted">SKU:</small><br>
-                                                            <strong>{{ produto.sku }}</strong>
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <small class="text-muted">Modelo:</small><br>
-                                                            <strong>{{ produto.modelo }}</strong>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row mt-2">
-                                                        <div class="col-12">
-                                                            <small class="text-muted">Preço:</small><br>
-                                                            <strong class="text-success">R$ {{ "{:,.2f}".format(produto.preco_venda).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mt-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="confirmExclusao{{ produto.id }}" 
-                                                           onchange="document.getElementById('btnExcluir{{ produto.id }}').disabled = !this.checked">
-                                                    <label class="form-check-label" for="confirmExclusao{{ produto.id }}">
-                                                        Confirmo que desejo excluir este produto permanentemente
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                <i class="bi bi-x-circle me-1"></i> Cancelar
-                                            </button>
-                                            <form method="POST" action="{{ url_for('excluir_produto', id=produto.id) }}" 
-                                                  id="formExcluir{{ produto.id }}">
-                                                <button type="submit" class="btn btn-danger" id="btnExcluir{{ produto.id }}" disabled>
-                                                    <i class="bi bi-trash me-1"></i> Excluir Permanentemente
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -318,9 +254,9 @@
                 <div class="col-md-6">
                     <div class="text-muted small">
                         <i class="bi bi-info-circle me-1"></i>
-                        Total: {{ produtos|length }} produtos
-                        ({{ produtos|selectattr('ativo', 'equalto', true)|list|length }} ativos,
-                        {{ produtos|selectattr('ativo', 'equalto', false)|list|length }} inativos)
+                        Total: <span id="total-rodape">{{ produtos|length }}</span> produtos
+                        (<span id="ativos-rodape">{{ produtos|selectattr('ativo', 'equalto', true)|list|length }}</span> ativos,
+                        <span id="inativos-rodape">{{ produtos|selectattr('ativo', 'equalto', false)|list|length }}</span> inativos)
                     </div>
                 </div>
                 <div class="col-md-6 text-end">
@@ -360,42 +296,87 @@
 <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
-// SCANNER AUTOMÁTICO - Submeter formulário ao digitar
+// SCANNER AUTOMÁTICO - IGUALZINHO AO DA CONSULTA
 document.addEventListener('DOMContentLoaded', function() {
     const campoBusca = document.getElementById('buscaProdutos');
-    const formBusca = document.getElementById('formBusca');
+    const btnLimpar = document.getElementById('limpar-busca');
+    const inputOculto = document.getElementById('inputBuscaOculto');
     
     if (campoBusca) {
-        // Submeter ao digitar (após pausa)
+        // Foco no campo (igual Consulta)
+        campoBusca.focus();
+        campoBusca.select();
+        
+        // Mostrar botão limpar se houver valor (igual Consulta)
+        if (campoBusca.value.trim() !== '') {
+            btnLimpar.style.display = 'block';
+        }
+        
+        // Função para verificar botão limpar (igual Consulta)
+        function verificarBotaoLimpar() {
+            if (btnLimpar) {
+                btnLimpar.style.display = campoBusca.value.trim() !== '' ? 'block' : 'none';
+            }
+        }
+        
+        // TIMEOUT DE 300ms IGUALZINHO CONSULTA
         let timeoutBusca;
         campoBusca.addEventListener('input', function() {
             clearTimeout(timeoutBusca);
+            const valor = this.value;
+            
             timeoutBusca = setTimeout(() => {
-                formBusca.submit();
-            }, 600);
-            verificarBotaoLimpar('buscaProdutos', this.value);
+                // USA O DATATABLES PARA FILTRAR (NÃO RECARREGA A PÁGINA)
+                if ($.fn.DataTable.isDataTable('#tabelaProdutos')) {
+                    $('#tabelaProdutos').DataTable().search(valor).draw();
+                }
+                if (inputOculto) inputOculto.value = valor;
+                verificarBotaoLimpar();
+            }, 300);
+            verificarBotaoLimpar();
         });
         
-        // Scanner (Enter)
+        // Enter - comportamento igual Consulta
         campoBusca.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                formBusca.submit();
+                const codigo = this.value.trim();
+                if (codigo) {
+                    // Dispara busca imediata no DataTables
+                    if ($.fn.DataTable.isDataTable('#tabelaProdutos')) {
+                        $('#tabelaProdutos').DataTable().search(codigo).draw();
+                    }
+                    if (inputOculto) inputOculto.value = codigo;
+                    
+                    // Limpa após scanner (igual Consulta)
+                    setTimeout(() => {
+                        this.value = '';
+                        if (inputOculto) inputOculto.value = '';
+                        if (btnLimpar) btnLimpar.style.display = 'none';
+                        this.focus();
+                    }, 100);
+                }
+            }
+            
+            // F3 para focar (igual Consulta)
+            if (e.key === 'F3') {
+                e.preventDefault();
+                this.focus();
+                this.select();
             }
         });
     }
     
     // Listener para o select de status
     document.getElementById('filtroStatus').addEventListener('change', function() {
-        verificarBotaoLimpar('filtroStatus', this.value);
+        verificarBotaoLimparFiltro('filtroStatus', this.value);
     });
     
     // Verificar estado inicial dos botões
-    verificarBotaoLimpar('buscaProdutos', document.getElementById('buscaProdutos')?.value || '');
-    verificarBotaoLimpar('filtroStatus', document.getElementById('filtroStatus')?.value || '');
+    verificarBotaoLimparFiltro('buscaProdutos', document.getElementById('buscaProdutos')?.value || '');
+    verificarBotaoLimparFiltro('filtroStatus', document.getElementById('filtroStatus')?.value || '');
     
-    // Inicializar DataTable - IGUAL AO RELATÓRIO DE VENDAS
-// Inicializar DataTable com tradução embutida
+    // Inicializar DataTable (MESMA CONFIGURAÇÃO)
     $('#tabelaProdutos').DataTable({
         language: {
             "sEmptyTable": "Nenhum registro encontrado",
@@ -424,28 +405,49 @@ document.addEventListener('DOMContentLoaded', function() {
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
         order: [[0, 'asc']],
         responsive: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip'
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
+        // Atualizar contadores após filtro
+        drawCallback: function() {
+            atualizarContadores();
+        }
     });
 });
 
+// Função para atualizar contadores (igual Consulta)
+function atualizarContadores() {
+    const table = $('#tabelaProdutos').DataTable();
+    const info = table.page.info();
+    
+    // Atualizar contadores baseado nos registros filtrados
+    document.getElementById('total-encontrado').textContent = info.recordsDisplay;
+    
+    // Calcular ativos e inativos nos registros filtrados
+    let ativos = 0;
+    let inativos = 0;
+    
+    $('#tabelaProdutos tbody tr').each(function() {
+        if ($(this).css('display') !== 'none') {
+            if ($(this).find('.badge.bg-success').length > 0) {
+                ativos++;
+            } else if ($(this).find('.badge.bg-danger').length > 0) {
+                inativos++;
+            }
+        }
+    });
+    
+    document.getElementById('total-ativos').textContent = ativos;
+    document.getElementById('total-inativos').textContent = inativos;
+    document.getElementById('ativos-rodape').textContent = ativos;
+    document.getElementById('inativos-rodape').textContent = inativos;
+    document.getElementById('total-rodape').textContent = info.recordsDisplay;
+}
+
 // Função para verificar se deve mostrar botão limpar
-function verificarBotaoLimpar(campoId, valor) {
+function verificarBotaoLimparFiltro(campoId, valor) {
     const btnLimpar = document.getElementById(`limpar-${campoId}`);
     if (btnLimpar) {
         if (campoId === 'filtroStatus') {
-            // Só mostra botão se não for 'ativos' (padrão da página)
-            if (valor && valor !== 'ativos') {
-                btnLimpar.style.display = 'block';
-            } else {
-                btnLimpar.style.display = 'none';
-            }
-        } else if (campoId === 'buscaProdutos') {
-            // Só mostra botão se tiver valor
-            if (valor && valor !== '') {
-                btnLimpar.style.display = 'block';
-            } else {
-                btnLimpar.style.display = 'none';
-            }
+            btnLimpar.style.display = (valor && valor !== 'ativos') ? 'block' : 'none';
         }
     }
 }
@@ -454,18 +456,33 @@ function verificarBotaoLimpar(campoId, valor) {
 function limparFiltroIndividual(campoId) {
     const campo = document.getElementById(campoId);
     if (campo) {
-        if (campoId === 'buscaProdutos') {
-            campo.value = '';
-            document.getElementById('formBusca').submit();
-        } else if (campoId === 'filtroStatus') {
-            campo.value = 'ativos'; // Status volta para 'ativos' (padrão da página)
+        if (campoId === 'filtroStatus') {
+            campo.value = 'ativos';
             campo.dispatchEvent(new Event('change'));
             document.getElementById('formFiltro').submit();
         }
-        document.getElementById(`limpar-${campoId}`).style.display = 'none';
     }
 }
 
+// Função para limpar busca (chamada pelo botão)
+function limparBusca() {
+    const campoBusca = document.getElementById('buscaProdutos');
+    const btnLimpar = document.getElementById('limpar-busca');
+    const inputOculto = document.getElementById('inputBuscaOculto');
+    
+    if (campoBusca) {
+        campoBusca.value = '';
+        if (inputOculto) inputOculto.value = '';
+        
+        // Limpa a busca do DataTables
+        if ($.fn.DataTable.isDataTable('#tabelaProdutos')) {
+            $('#tabelaProdutos').DataTable().search('').draw();
+        }
+        
+        if (btnLimpar) btnLimpar.style.display = 'none';
+        campoBusca.focus();
+    }
+}
 </script>
 
 <style>
@@ -556,5 +573,10 @@ function limparFiltroIndividual(campoId) {
     border-color: #146c43;
 }
 
+/* Estilo para o campo de busca */
+.input-group:focus-within {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-radius: 0.375rem;
+}
 </style>
 {% endblock %}
