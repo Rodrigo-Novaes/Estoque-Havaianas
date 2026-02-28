@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="d-flex gap-2">  
     <a href="{{ url_for('estoque') }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Voltar
     </a>
@@ -914,6 +914,17 @@ atualizarContadores();
 .border-hover:hover {
     border-color: #0d6efd;
     box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+}
+/* ===== PADRÃO DE BOTÕES IGUAL À LISTA DE PRODUTOS ===== */
+.btn, .btn-sm, .btn-group .btn, .input-group .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
+.btn-close {
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
 }
 </style>
 {% endblock %}

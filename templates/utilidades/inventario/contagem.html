@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="d-flex gap-2">
     <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Voltar
     </a>
@@ -213,7 +213,7 @@
                 </div>
             </div>
             <div class="col-md-6 text-end">
-                <button type="button" class="btn btn-success me-2" onclick="finalizarContagem()">
+                <button type="button" class="btn btn-success me-1" onclick="finalizarContagem()">
                     <i class="bi bi-check-circle me-1"></i> Finalizar Contagem
                 </button>
                 <a href="{{ url_for('ver_inventario', id=inventario.id) }}" class="btn btn-outline-secondary">
@@ -303,6 +303,14 @@ body {
     border-color: #28a745;
     box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
+/* ===== CORREÇÃO DOS BOTÕES FINALIZAR CONTAGEM E CANCELAR ===== */
+.fixed-bottom .btn-success,
+.fixed-bottom .btn-outline-secondary {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
 </style>
 
 <script>

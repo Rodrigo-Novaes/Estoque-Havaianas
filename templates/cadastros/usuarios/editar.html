@@ -16,7 +16,7 @@
         <div class="content-card">
             <form method="POST" action="{{ url_for('editar_usuario', id=usuario.id) }}">
                 <!-- Linha 1: Nome de usuário e Nova senha -->
-                <div class="row mb-3">
+                <div class="row mb-2">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Nome de usuário *</label>
                         <input type="text" name="username" class="form-control" value="{{ form_data.username or usuario.username }}" required autofocus>
@@ -30,7 +30,7 @@
                 </div>
 
                 <!-- Linha 2: Nome completo e E-mail -->
-                <div class="row mb-3">
+                <div class="row mb-2">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Nome completo</label>
                         <input type="text" name="nome" class="form-control" value="{{ form_data.nome or usuario.nome or '' }}">
@@ -42,7 +42,7 @@
                 </div>
 
                 <!-- Linha 3: Telefone -->
-                <div class="row mb-3">
+                <div class="row mb-2">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Telefone</label>
                         <input type="text" name="telefone" id="telefone" class="form-control" value="{{ form_data.telefone or usuario.telefone or '' }}" placeholder="(11) 99999-9999">
@@ -54,7 +54,7 @@
                 </div>
 
                 <!-- Linha 4: Nível de permissão e Status -->
-                <div class="row mb-3">
+                <div class="row mb-2">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Nível de permissão</label>
                         <select name="admin" class="form-select">
@@ -80,7 +80,7 @@
                 </div>
 
                 <!-- Botões -->
-                <div class="d-flex justify-content-end gap-2 mt-4">
+                <div class="d-flex justify-content-end gap-2 mt-3">
                     <a href="{{ url_for('listar_usuarios') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-lg"></i> Cancelar
                     </a>
@@ -105,4 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<style>
+/* ===== DIMINUIR BOTÕES CANCELAR E ATUALIZAR ===== */
+.d-flex.justify-content-end.gap-2 .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+</style>
 {% endblock %}

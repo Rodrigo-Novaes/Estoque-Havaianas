@@ -276,8 +276,8 @@
 
                     <!-- Botões -->
                     <div class="mt-4">
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" onclick="limparFormulario()">
+                        <div class="d-grid gap-1 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-secondary me-1" onclick="limparFormulario()">
                                 <i class="bi bi-x-circle me-2"></i> Limpar
                             </button>
                             <button type="submit" class="btn btn-success">
@@ -3637,5 +3637,16 @@
         color: white;
         border-color: #dc3545;
     }
+    /* ===== PADRÃO DE BOTÕES IGUAL À LISTA DE PRODUTOS ===== */
+.btn, .btn-sm, .btn-group .btn, .input-group .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
+.btn-close {
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
+}
 </style>
 {% endblock %}

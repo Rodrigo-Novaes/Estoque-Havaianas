@@ -1428,7 +1428,7 @@ def api_produto_grades_por_codigo(codigo):
         
         resultados = []
         for grade in grades:
-            imagem = grade.imagem if grade.imagem else produto.imagem
+            imagem = produto.imagem
             
             resultados.append({
                 'id': grade.id,

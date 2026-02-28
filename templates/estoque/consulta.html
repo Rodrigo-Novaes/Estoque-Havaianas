@@ -7,15 +7,15 @@
 {% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="d-flex gap-2">
     <!-- BOTÃO ADICIONADO - NÃO MEXE NA ESTRUTURA ORIGINAL -->
     <button type="button" class="btn btn-sm btn-success" onclick="exportarParaExcel()">
         <i class="bi bi-file-excel me-1"></i> Exportar Excel
     </button>
-    <a href="{{ url_for('entrada_estoque') }}" class="btn btn-primary">
+    <a href="{{ url_for('entrada_estoque') }}" class="btn btn-sm btn-primary">
         <i class="bi bi-arrow-down-circle me-1"></i> Nova Entrada
     </a>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Voltar
     </a>
 </div>
@@ -316,6 +316,17 @@
     text-overflow: ellipsis;
     max-width: 150px; /* Limita o texto */
     display: inline-block;
+}
+/* ===== PADRÃO DE BOTÕES IGUAL À LISTA DE PRODUTOS ===== */
+.btn, .btn-sm, .btn-group .btn, .input-group .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
+.btn-close {
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
 }
 </style>
 

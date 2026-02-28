@@ -52,7 +52,7 @@
     </div>
 </div>
 
-<!-- CARD DE BUSCA PARA AJUSTE -->
+<!-- CARD DE BUSCA PARA AJUSTE - MODIFICADO PARA BUSCA INTELIGENTE -->
 <div class="card mb-4 border-warning">
     <div class="card-header bg-warning">
         <h5 class="mb-0"><i class="bi bi-search me-2"></i>Buscar Produto para Ajustar</h5>
@@ -61,14 +61,26 @@
         <div class="row">
             <div class="col-md-8">
                 <label class="form-label fw-bold">Digite SKU, código ou nome do produto:</label>
+                
+                <!-- BUSCA INTELIGENTE - IGUAL CONSULTA -->
                 <div class="input-group">
-                    <input type="text" class="form-control form-control-lg" id="buscaProduto" 
-                           placeholder="Ex: HAV001 ou Havaianas Slim...">
-                    <button class="btn btn-warning btn-lg" type="button" onclick="buscarProdutos()">
-                        <i class="bi bi-search"></i> Buscar
+                    <span class="input-group-text bg-light">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" 
+                           class="form-control" 
+                           id="buscaProduto" 
+                           placeholder="Digite SKU, produto, cor ou tamanho..."
+                           value=""
+                           aria-label="Buscar produto"
+                           autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" onclick="limparBusca()" title="Limpar busca" style="display: none;" id="limpar-busca">
+                        <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
-                <small class="text-muted">Digite pelo menos 2 caracteres</small>
+                <small class="text-muted mt-1 d-block">
+                    <i class="bi bi-info-circle"></i> Busca automática • Digite para pesquisar
+                </small>
                 
                 <!-- Resultados da busca -->
                 <div id="resultadosBusca" class="list-group mt-3" style="max-height: 300px; overflow-y: auto;"></div>
@@ -212,53 +224,10 @@
 <script>
 let gradeSelecionada = null;
 let timeoutId;
+let timeoutBusca; // PARA A BUSCA AUTOMÁTICA
+let ultimoTermo = ''; // PARA EVITAR BUSCAS REPETIDAS
 
-function buscarProdutos() {
-    const termo = document.getElementById('buscaProduto').value.trim();
-    
-    if (termo.length < 2) {
-        alert('Digite pelo menos 2 caracteres');
-        return;
-    }
-    
-    document.getElementById('resultadosBusca').innerHTML = `
-        <div class="list-group-item text-center">
-            <div class="spinner-border spinner-border-sm text-warning"></div> Buscando...
-        </div>
-    `;
-    
-    fetch(`/api/buscar-produtos/${encodeURIComponent(termo)}`)
-        .then(response => response.json())
-        .then(produtos => {
-            if (produtos.length === 0) {
-                document.getElementById('resultadosBusca').innerHTML = `
-                    <div class="list-group-item text-center text-muted">
-                        Nenhum produto encontrado
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            produtos.forEach(p => {
-                html += `
-                    <div class="list-group-item" onclick="buscarGrades('${p.codigo}')">
-                        <strong>${p.codigo}</strong> - ${p.descricao}
-                    </div>
-                `;
-            });
-            document.getElementById('resultadosBusca').innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            document.getElementById('resultadosBusca').innerHTML = `
-                <div class="list-group-item text-center text-danger">
-                    Erro ao buscar produtos
-                </div>
-            `;
-        });
-}
-
+// ===== FUNÇÕES ORIGINAIS MANTIDAS =====
 function buscarGrades(codigo) {
     fetch(`/api/produto/${codigo}/grades`)
         .then(response => response.json())
@@ -340,17 +309,108 @@ function aplicarAjuste() {
     });
 }
 
-// Busca ao digitar com delay
+// ===== NOVAS FUNÇÕES PARA BUSCA INTELIGENTE (IGUAL CONSULTA) =====
+function verificarBotaoLimpar() {
+    const campoBusca = document.getElementById('buscaProduto');
+    const btnLimpar = document.getElementById('limpar-busca');
+    if (btnLimpar) {
+        btnLimpar.style.display = campoBusca.value.trim() !== '' ? 'block' : 'none';
+    }
+}
+
+function limparBusca() {
+    const campoBusca = document.getElementById('buscaProduto');
+    const resultados = document.getElementById('resultadosBusca');
+    campoBusca.value = '';
+    resultados.innerHTML = '';
+    ultimoTermo = '';
+    verificarBotaoLimpar();
+    campoBusca.focus();
+}
+
+function buscarProdutosAutomatico() {
+    const termo = document.getElementById('buscaProduto').value.trim();
+    verificarBotaoLimpar();
+    
+    if (termo.length < 2) {
+        document.getElementById('resultadosBusca').innerHTML = '';
+        return;
+    }
+    
+    // Não busca se for o mesmo termo
+    if (termo === ultimoTermo) return;
+    ultimoTermo = termo;
+    
+    document.getElementById('resultadosBusca').innerHTML = `
+        <div class="list-group-item text-center">
+            <div class="spinner-border spinner-border-sm text-warning"></div> Buscando...
+        </div>
+    `;
+    
+    fetch(`/api/buscar-produtos/${encodeURIComponent(termo)}`)
+        .then(response => response.json())
+        .then(produtos => {
+            if (produtos.length === 0) {
+                document.getElementById('resultadosBusca').innerHTML = `
+                    <div class="list-group-item text-center text-muted">
+                        Nenhum produto encontrado
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            produtos.forEach(p => {
+                html += `
+                    <div class="list-group-item" onclick="buscarGrades('${p.codigo}')">
+                        <strong>${p.codigo}</strong> - ${p.descricao}
+                    </div>
+                `;
+            });
+            document.getElementById('resultadosBusca').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            document.getElementById('resultadosBusca').innerHTML = `
+                <div class="list-group-item text-center text-danger">
+                    Erro ao buscar produtos
+                </div>
+            `;
+        });
+}
+
+// ===== CONFIGURAÇÃO INICIAL =====
+document.addEventListener('DOMContentLoaded', function() {
+    const campoBusca = document.getElementById('buscaProduto');
+    
+    if (campoBusca) {
+        campoBusca.focus();
+        
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutBusca);
+            timeoutBusca = setTimeout(buscarProdutosAutomatico, 300);
+        });
+        
+        campoBusca.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarProdutosAutomatico();
+            }
+        });
+    }
+});
+
+// Manter a função original de busca com delay para compatibilidade
 document.getElementById('buscaProduto').addEventListener('input', function() {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(buscarProdutos, 500);
+    timeoutId = setTimeout(buscarProdutosAutomatico, 500);
 });
 
 // Enter para buscar
 document.getElementById('buscaProduto').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
-        buscarProdutos();
+        buscarProdutosAutomatico();
     }
 });
 </script>
@@ -359,5 +419,30 @@ document.getElementById('buscaProduto').addEventListener('keypress', function(e)
 body { margin-bottom: 80px; }
 .list-group-item { cursor: pointer; }
 .list-group-item:hover { background-color: #fff3cd; }
+
+/* ===== CORREÇÃO DOS BOTÕES FINALIZAR AJUSTES E CANCELAR ===== */
+.fixed-bottom .btn-success,
+.fixed-bottom .btn-outline-secondary {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
+/* ===== ESPAÇAMENTO ENTRE OS BOTÕES ===== */
+.fixed-bottom .ms-2 {
+    margin-left: 0.25rem !important;
+}
+
+/* ===== ALTURA DOS BOTÕES PARA IGUALAR ===== */
+.fixed-bottom .btn {
+    line-height: 1.5;
+    height: 31px;
+}
+
+/* ===== ESTILO PARA O CAMPO DE BUSCA ===== */
+.input-group:focus-within {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-radius: 0.375rem;
+}
 </style>
 {% endblock %}

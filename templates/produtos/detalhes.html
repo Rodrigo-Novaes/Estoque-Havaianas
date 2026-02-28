@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block page_actions %}
-<div class="btn-group">
+<div class="d-flex gap-2">
     <a href="{{ url_for('produtos') }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i> Voltar
     </a>
@@ -229,4 +229,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<style>
+/* ===== PADRÃO DE BOTÕES IGUAL À LISTA DE PRODUTOS ===== */
+.btn, .btn-sm, .btn-group .btn, .input-group .btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+}
+
+.btn-close {
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
+}
+</style>
 {% endblock %}

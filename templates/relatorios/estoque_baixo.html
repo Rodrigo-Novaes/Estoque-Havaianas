@@ -2,7 +2,7 @@
 Havaianas{% endblock %} {% block page_title %}
 <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Estoque Abaixo
 do Mínimo {% endblock %} {% block page_actions %}
-<div class="btn-group">
+<div class="d-flex gap-2">
   <button
     type="button"
     class="btn btn-sm btn-outline-primary"
@@ -496,7 +496,7 @@ do Mínimo {% endblock %} {% block page_actions %}
         </div>
         <div class="col-md-4 text-end">
           <button
-            class="btn btn-success me-2"
+            class="btn btn-success me-1"
             onclick="gerarRelatorioCompleto()"
           >
             <i class="bi bi-file-earmark-text me-1"></i> Relatório
@@ -1115,5 +1115,15 @@ do Mínimo {% endblock %} {% block page_actions %}
       border: 1px solid #ccc !important;
     }
   }
+  /* ===== CORREÇÃO ESPECÍFICA PARA BOTÕES RELATÓRIO E ENVIAR ===== */
+.col-md-4.text-end .btn,
+.col-md-4.text-end .btn-success,
+.col-md-4.text-end .btn-outline-primary {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.2rem !important;
+    height: 31px; /* Altura fixa para igualar aos outros */
+    line-height: 1.5;
+}
 </style>
 {% endblock %}
