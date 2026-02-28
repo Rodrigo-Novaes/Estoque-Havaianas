@@ -741,7 +741,7 @@ def listar_usuarios():
     usuarios_inativos = Usuario.query.filter_by(ativo=False).count()
     administradores = Usuario.query.filter_by(admin=True).count()
     
-    return render_template('usuarios/lista.html',
+    return render_template('cadastros/usuarios/lista.html',
                          usuarios=usuarios,
                          busca=busca,
                          status=status,
@@ -778,11 +778,11 @@ def novo_usuario():
             
             if len(password) < 6:
                 flash('A senha deve ter no mínimo 6 caracteres!', 'error')
-                return render_template('usuarios/novo.html', form_data=form_data)
+                return render_template('cadastros/usuarios/novo.html', form_data=form_data)
             
             if Usuario.query.filter_by(username=username).first():
                 flash(f'Usuário "{username}" já existe!', 'error')
-                return render_template('usuarios/novo.html', form_data=form_data)
+                return render_template('cadastros/usuarios/novo.html', form_data=form_data)
             
             admin_value = True if request.form.get('admin') == '1' else False
             ativo_value = True if request.form.get('ativo') == '1' else True
@@ -806,9 +806,9 @@ def novo_usuario():
         except Exception as e:
             db.session.rollback()
             flash(f'❌ Erro ao criar usuário: {str(e)}', 'error')
-            return render_template('usuarios/novo.html', form_data=form_data)
+            return render_template('cadastros/usuarios/novo.html', form_data=form_data)
     
-    return render_template('usuarios/novo.html', form_data={})
+    return render_template('cadastros/usuarios/novo.html', form_data={})
 
 @app.route('/usuario/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -838,7 +838,7 @@ def editar_usuario(id):
             existente = Usuario.query.filter_by(username=username).first()
             if existente and existente.id != id:
                 flash(f'Usuário "{username}" já existe!', 'error')
-                return render_template('usuarios/editar.html', usuario=usuario, form_data=form_data)
+                return render_template('cadastros/usuarios/editar.html', usuario=usuario, form_data=form_data)
             
             admin_value = True if request.form.get('admin') == '1' else False
             ativo_value = True if request.form.get('ativo') == '1' else False
@@ -854,7 +854,7 @@ def editar_usuario(id):
             if nova_senha:
                 if len(nova_senha) < 6:
                     flash('A senha deve ter no mínimo 6 caracteres!', 'error')
-                    return render_template('usuarios/editar.html', usuario=usuario, form_data=form_data)
+                    return render_template('cadastros/usuarios/editar.html', usuario=usuario, form_data=form_data)
                 usuario.password = nova_senha
             
             db.session.commit()
@@ -865,9 +865,9 @@ def editar_usuario(id):
         except Exception as e:
             db.session.rollback()
             flash(f'❌ Erro ao atualizar: {str(e)}', 'error')
-            return render_template('usuarios/editar.html', usuario=usuario, form_data=form_data)
+            return render_template('cadastros/usuarios/editar.html', usuario=usuario, form_data=form_data)
     
-    return render_template('usuarios/editar.html', usuario=usuario, form_data={})
+    return render_template('cadastros/usuarios/editar.html', usuario=usuario, form_data={})
 
 @app.route('/usuario/toggle/<int:id>', methods=['POST'])
 @login_required
@@ -989,7 +989,7 @@ def api_usuario_detalhes(id):
 def perfil():
     """Página de perfil do usuário logado"""
     usuario = Usuario.query.get(session['usuario_id'])
-    return render_template('usuarios/perfil.html', usuario=usuario)
+    return render_template('cadastros/usuarios/perfil.html', usuario=usuario)
 
 @app.route('/perfil/atualizar', methods=['POST'])
 @login_required

@@ -559,7 +559,7 @@ function imprimirLista() {
 }
 .dataTables_wrapper .dataTables_length select,
 .dataTables_wrapper .dataTables_filter input {
-    padding: 0.25rem 0.5rem;
+    /* padding: 0.25rem 0.5rem; */
     border-radius: 0.2rem;
     border: 1px solid #dee2e6;
 }
@@ -611,6 +611,18 @@ function imprimirLista() {
     .btn-sm {
         padding: 0.25rem 0.4rem;
     }
+}
+@media (max-width: 480px) {
+    .avatar-circle {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 12px !important;
+    }
+}
+
+/* E adicione esta propriedade no .avatar-circle existente */
+.avatar-circle {
+    flex-shrink: 0; /* IMPEDE QUE O AVATAR ENCOLHA */
 }
 </style>
 {% endblock %}

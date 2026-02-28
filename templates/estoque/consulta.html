@@ -7,12 +7,18 @@
 {% endblock %}
 
 {% block page_actions %}
-<a href="{{ url_for('entrada_estoque') }}" class="btn btn-primary">
-    <i class="bi bi-arrow-down-circle me-1"></i> Nova Entrada
-</a>
-<a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i> Voltar
-</a>
+<div class="btn-group">
+    <!-- BOTÃO ADICIONADO - NÃO MEXE NA ESTRUTURA ORIGINAL -->
+    <button type="button" class="btn btn-sm btn-success" onclick="exportarParaExcel()">
+        <i class="bi bi-file-excel me-1"></i> Exportar Excel
+    </button>
+    <a href="{{ url_for('entrada_estoque') }}" class="btn btn-primary">
+        <i class="bi bi-arrow-down-circle me-1"></i> Nova Entrada
+    </a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -199,6 +205,9 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- ADICIONADO: SheetJS para gerar Excel (NÃO MEXE NO RESTO) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <!-- Adicionar DataTables CSS e JS -->
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
 <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
@@ -255,7 +264,7 @@
 }
 .dataTables_wrapper .dataTables_length select,
 .dataTables_wrapper .dataTables_filter input {
-    padding: 0.25rem 0.5rem;
+    /* padding: 0.25rem 0.5rem; */
     border-radius: 0.2rem;
     border: 1px solid #dee2e6;
 }
@@ -315,7 +324,224 @@ function ampliarImagem(elemento) {
     modal.show();
 }
 
-// DOCUMENT READY
+// ========== NOVA FUNÇÃO PARA EXPORTAR PARA EXCEL (ADICIONADA) ==========
+// ========== FUNÇÃO PARA EXPORTAR PARA EXCEL (COM FORMATAÇÃO MELHORADA) ==========
+function exportarParaExcel() {
+    // Verificar se há dados na tabela
+    const linhas = document.querySelectorAll('#corpoTabelaEstoque tr');
+    if (linhas.length === 0 || (linhas.length === 1 && linhas[0].querySelector('td[colspan="7"]'))) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Nenhum dado',
+                text: 'Não há produtos em estoque para exportar.',
+                confirmButtonColor: '#3085d6'
+            });
+        } else {
+            alert('Não há produtos em estoque para exportar.');
+        }
+        return;
+    }
+
+    try {
+        // Coletar apenas linhas visíveis (respeita os filtros atuais)
+        const linhasVisiveis = Array.from(linhas).filter(linha => 
+            linha.style.display !== 'none' && !linha.querySelector('td[colspan="7"]')
+        );
+        
+        if (linhasVisiveis.length === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Nenhum dado',
+                    text: 'Não há produtos com os filtros atuais.',
+                    confirmButtonColor: '#3085d6'
+                });
+            } else {
+                alert('Não há produtos com os filtros atuais.');
+            }
+            return;
+        }
+
+        // Preparar dados para o Excel
+        const dados = [];
+        
+        // === TÍTULO DO RELATÓRIO ===
+        dados.push(['RELATÓRIO DE CONSULTA DE ESTOQUE']);
+        dados.push([`Gerado em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`]);
+        dados.push([]); // Linha em branco
+        
+        // === CABEÇALHO PRINCIPAL ===
+        dados.push([
+            'ID',
+            'SKU',
+            'PRODUTO',
+            'MODELO',
+            'COR',
+            'TAM',
+            'ESTOQUE',
+            'MÍNIMO',
+            'LOCALIZAÇÃO',
+            'STATUS'
+        ]);
+
+        // === DADOS DAS LINHAS ===
+        let totalEstoque = 0;
+        let estoqueBaixo = 0;
+        
+        linhasVisiveis.forEach(linha => {
+            const produtoId = linha.getAttribute('data-produto-id') || '';
+            
+            // Extrair informações das células
+            const cells = linha.querySelectorAll('td');
+            
+            // Produto (descrição e SKU)
+            const produtoDiv = cells[0]?.querySelector('div div:last-child');
+            const descricao = produtoDiv?.querySelector('h6')?.textContent?.trim() || '';
+            const skuBadge = produtoDiv?.querySelector('.badge.bg-dark')?.textContent?.trim() || '';
+            
+            // Modelo (se existir)
+            const modeloBadge = produtoDiv?.querySelector('.badge.bg-secondary')?.textContent?.trim() || '';
+            
+            // Cor
+            const corDiv = cells[1];
+            const cor = corDiv?.textContent?.trim().replace(/\s+/g, ' ').split(' ').pop() || '';
+            
+            // Tamanho
+            const tamanho = cells[2]?.querySelector('.badge')?.textContent?.trim() || '';
+            
+            // Estoque Atual
+            const badgeEstoque = cells[3]?.querySelector('.badge');
+            const estoqueAtual = badgeEstoque?.textContent?.trim() || '0';
+            
+            // Estoque Mínimo
+            const estoqueMinimo = cells[4]?.textContent?.trim() || '0';
+            
+            // Localização
+            const localizacao = cells[5]?.querySelector('.badge')?.textContent?.trim().replace('📍', '').trim() || '';
+            
+            // Status
+            const status = cells[6]?.querySelector('.badge')?.textContent?.trim() || '';
+            
+            // Calcular totais para o consolidado
+            const estoqueNum = parseInt(estoqueAtual) || 0;
+            totalEstoque += estoqueNum;
+            
+            // Verificar se é estoque baixo (classe bg-danger e > 0)
+            if (badgeEstoque?.classList.contains('bg-danger') && estoqueNum > 0) {
+                estoqueBaixo++;
+            }
+            
+            dados.push([
+                produtoId,
+                skuBadge,
+                descricao,
+                modeloBadge,
+                cor,
+                tamanho,
+                estoqueAtual,
+                estoqueMinimo,
+                localizacao,
+                status
+            ]);
+        });
+
+        // Duas linhas em branco antes do consolidado
+        dados.push([]);
+        dados.push([]);
+        
+        // === CONSOLIDADO (RODAPÉ) COM FORMATAÇÃO MELHOR ===
+        dados.push(['📊 RESUMO DO ESTOQUE', '', '', '', '', '', '', '', '', '']);
+        dados.push([]);
+        
+        // Tabela de resumo
+        dados.push(['', '', 'QUANTIDADE', '', '']);
+        dados.push(['Total de Grades', '', linhasVisiveis.length.toString(), '', '']);
+        dados.push(['Total em Estoque', '', totalEstoque.toString(), '', '']);
+        dados.push(['Estoque Baixo', '', estoqueBaixo.toString(), '', '']);
+        dados.push(['Estoque Normal', '', (linhasVisiveis.length - estoqueBaixo).toString(), '', '']);
+        
+        // Linha em branco
+        dados.push([]);
+        
+        // === INDICADORES VISUAIS (TEXTO) ===
+        dados.push(['LEGENDA:']);
+        dados.push(['• Estoque Baixo: Produtos com estoque abaixo do mínimo']);
+        dados.push(['• Estoque Normal: Produtos com estoque adequado']);
+        dados.push([]);
+        dados.push(['RELATÓRIO GERADO PELO SISTEMA HAVAIANAS']);
+
+        // Criar worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(dados);
+
+        // Ajustar largura das colunas (MELHORADO)
+        const colunas = [
+            { wch: 8 },   // ID
+            { wch: 15 },  // SKU
+            { wch: 35 },  // PRODUTO
+            { wch: 12 },  // MODELO
+            { wch: 12 },  // COR
+            { wch: 6 },   // TAM
+            { wch: 10 },  // ESTOQUE
+            { wch: 8 },   // MÍNIMO
+            { wch: 15 },  // LOCALIZAÇÃO
+            { wch: 12 }   // STATUS
+        ];
+        ws['!cols'] = colunas;
+
+        // Mesclar células para o título
+        if (!ws['!merges']) ws['!merges'] = [];
+        ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }); // Título principal
+        ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 9 } }); // Data/Hora
+        
+        // Mesclar células do resumo
+        const linhaResumo = dados.length - 15; // Ajuste conforme necessário
+        ws['!merges'].push({ s: { r: linhaResumo, c: 0 }, e: { r: linhaResumo, c: 9 } }); // "📊 RESUMO DO ESTOQUE"
+        
+        // Adicionar worksheet ao workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Consulta de Estoque');
+
+        // Gerar nome do arquivo com data atual
+        const data = new Date();
+        const dataStr = data.toLocaleDateString('pt-BR').replace(/\//g, '-');
+        const nomeArquivo = `estoque_${dataStr}.xlsx`;
+
+        // Salvar arquivo
+        XLSX.writeFile(wb, nomeArquivo);
+
+        // Mensagem de sucesso
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Exportado com sucesso!',
+                html: `📁 <strong>${nomeArquivo}</strong><br><br>
+                       📊 <strong>${linhasVisiveis.length}</strong> produtos<br>
+                       📦 <strong>${totalEstoque}</strong> unidades<br>
+                       ⚠️ <strong>${estoqueBaixo}</strong> em estoque baixo`,
+                timer: 4000,
+                showConfirmButton: false
+            });
+        } else {
+            alert(`✅ Exportado! ${linhasVisiveis.length} produtos, ${totalEstoque} unidades`);
+        }
+
+    } catch (error) {
+        console.error('Erro ao exportar:', error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao exportar',
+                text: 'Ocorreu um erro ao gerar o arquivo Excel.',
+                confirmButtonColor: '#3085d6'
+            });
+        } else {
+            alert('❌ Erro ao exportar. Verifique o console.');
+        }
+    }
+}
+
+// DOCUMENT READY (TUDO ORIGINAL, NADA ALTERADO)
 $(document).ready(function() {
     // Verificar se a tabela existe
     if ($('#tabelaEstoque').length === 0) return;

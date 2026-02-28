@@ -57,14 +57,13 @@
                     <table class="table table-hover mb-0" id="tabelaEstoque">
                         <thead class="table-light">
                             <tr>
-                                <th width="80px">Imagem</th>
-                                <th>Produto</th>
-                                <th>Cor</th>
-                                <th>Tamanho</th>
-                                <th>Estoque Atual</th>
-                                <th>Mínimo</th>
-                                <th>Localização</th>
-                                <th>Status</th>
+                                <th width="40%">Produto</th>
+                                <th width="10%">Cor</th>
+                                <th width="10%">Tamanho</th>
+                                <th width="10%">Estoque Atual</th>
+                                <th width="10%">Mínimo</th>
+                                <th width="10%">Localização</th>
+                                <th width="10%">Status</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabelaEstoque">
@@ -75,22 +74,44 @@
                                 data-sku="{{ grade.sku_grade|lower }}"
                                 data-localizacao="{{ grade.localizacao|lower }}"
                                 data-produto-id="{{ grade.produto.id }}">
-                                <td style="text-align: center; vertical-align: middle; padding-left: 15px; padding-right: 15px;">
-                                    <!-- PLACEHOLDER INLINE SEM REQUISIÇÕES -->
-                                    <div class="imagem-container" data-produto-id="{{ grade.produto.id }}" style="cursor: pointer;" onclick="ampliarImagem(this)">
-                                        <svg width="50" height="50" viewBox="0 0 50 50" class="img-thumbnail placeholder-imagem">
-                                            <rect width="50" height="50" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
-                                            <text x="10" y="25" font-family="Arial" font-size="10" fill="#adb5bd">Sem</text>
-                                            <text x="10" y="35" font-family="Arial" font-size="10" fill="#adb5bd">Imagem</text>
-                                        </svg>
+                                
+                                <!-- PRODUTO COM IMAGEM DENTRO (com mais espaçamento à esquerda) -->
+                                <td style="padding-left: 30px !important;">
+                                    <div class="d-flex align-items-start">
+                                        <!-- Container da imagem com efeito hover - AFASTADO DA ESQUERDA -->
+                                        <div class="imagem-container me-3" style="width: 50px; height: 50px; flex-shrink: 0;">
+                                            <img id="img-produto-{{ grade.produto.id }}-{{ loop.index }}" 
+                                                 src="/static/img/no-image-small.png" 
+                                                 class="produto-thumbnail" 
+                                                 style="width: 50px; height: 50px; object-fit: contain; border: 1px solid #dee2e6; background-color: #f8f9fa; border-radius: 4px; cursor: pointer;"
+                                                 data-produto-id="{{ grade.produto.id }}"
+                                                 onclick="ampliarImagem(this)">
+                                        </div>
+                                        
+                                        <div>
+                                            <h6 class="mb-1">{{ grade.produto.descricao[:30] }}</h6>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <span class="badge bg-dark">{{ grade.sku_grade }}</span>
+                                                {% if grade.produto.modelo %}
+                                                <span class="badge bg-secondary">{{ grade.produto.modelo }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
+                                
+                                <!-- COR -->
                                 <td>
-                                    <strong>{{ grade.produto.descricao[:30] }}</strong><br>
-                                    <small class="text-muted">{{ grade.sku_grade }}</small>
+                                    <div class="d-flex align-items-center">
+                                        <div class="color-circle me-2" style="background-color: {{ cor_para_hex(grade.cor) if cor_para_hex else '#ccc' }}; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #dee2e6;"></div>
+                                        {{ grade.cor }}
+                                    </div>
                                 </td>
-                                <td>{{ grade.cor }}</td>
+                                
+                                <!-- TAMANHO -->
                                 <td><span class="badge bg-dark">{{ grade.tamanho }}</span></td>
+                                
+                                <!-- ESTOQUE ATUAL -->
                                 <td>
                                     {% set estoque_atual_num = grade.estoque_atual|int %}
                                     {% set estoque_minimo_num = grade.estoque_minimo|int %}
@@ -98,10 +119,19 @@
                                         {{ grade.estoque_atual }}
                                     </span>
                                 </td>
+                                
+                                <!-- MÍNIMO -->
                                 <td>{{ grade.estoque_minimo }}</td>
+                                
+                                <!-- LOCALIZAÇÃO -->
                                 <td>
-                                    <small class="text-muted">{{ grade.localizacao }}</small>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        {{ grade.localizacao }}
+                                    </span>
                                 </td>
+                                
+                                <!-- STATUS -->
                                 <td>
                                     {% set estoque_atual_num = grade.estoque_atual|int %}
                                     {% set estoque_minimo_num = grade.estoque_minimo|int %}
@@ -116,7 +146,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="8" class="text-center py-5">
+                                <td colspan="7" class="text-center py-5">
                                     <i class="bi bi-inbox fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">Nenhum produto encontrado</p>
                                 </td>
@@ -153,12 +183,12 @@
     </div>
 </div>
 
-<!-- Modal para ampliar imagem -->
+<!-- Modal para ampliar imagem (igual ao PDV) -->
 <div class="modal fade" id="modalImagem" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-body text-center p-3">
-                <img src="" class="img-fluid" id="imagemAmpliada" style="max-height: 300px;">
+                <img src="" class="img-fluid" id="imagemAmpliada" style="max-height: 300px; border: 2px solid #dee2e6; border-radius: 8px; padding: 5px; background-color: #f8f9fa;">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -175,37 +205,47 @@
 <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 
 <style>
-/* Estilos otimizados */
+/* ===== ESTILO PARA IMAGENS DOS PRODUTOS - IGUAL AO PDV ===== */
+.produto-thumbnail {
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.produto-thumbnail:hover {
+    transform: scale(2);
+    z-index: 9999;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    position: relative;
+}
+/* Container da imagem */
 .imagem-container {
     display: inline-block;
     width: 50px;
     height: 50px;
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
 }
 
-.placeholder-imagem {
-    transition: transform 0.2s;
+/* Círculo de cor */
+.color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+    display: inline-block;
 }
 
-.placeholder-imagem:hover {
-    transform: scale(1.5);
-    z-index: 10;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+/* Ajustes na primeira coluna - AFASTADA DA ESQUERDA IGUAL AO OUTRO CÓDIGO */
+#tabelaEstoque td:first-child {
+    padding-left: 30px !important;
+    overflow: visible !important;
+    position: relative;
 }
 
-#tabelaEstoque td:nth-child(1) {
-    text-align: center;
-    vertical-align: middle;
-    width: 80px;
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-}
-
-#tabelaEstoque th:nth-child(1) {
-    width: 80px;
-    text-align: center;
-    padding-left: 15px !important;
-    padding-right: 15px !important;
+#tabelaEstoque th:first-child {
+    padding-left: 30px !important;
 }
 
 /* Estilo DataTable nativo */
@@ -215,7 +255,7 @@
 }
 .dataTables_wrapper .dataTables_length select,
 .dataTables_wrapper .dataTables_filter input {
-    padding: 0.25rem 0.5rem;
+    /* padding: 0.25rem 0.5rem; */
     border-radius: 0.2rem;
     border: 1px solid #dee2e6;
 }
@@ -247,77 +287,28 @@
 // VARIÁVEIS GLOBAIS
 let todasGrades = [];
 let ultimoCodigoLido = '';
-let imagensCarregadas = new Set(); // Controlar quais já foram carregadas
 
-// ========== FUNÇÕES PARA IMAGENS OTIMIZADAS ==========
-function carregarImagensEstoque() {
-    const containers = document.querySelectorAll('.imagem-container[data-produto-id]');
-    let index = 0;
+// ========== FUNÇÃO PARA CARREGAR IMAGEM (igual ao PDV) ==========
+function carregarImagemProduto(produtoId, elementoImg) {
+    if (!produtoId || !elementoImg) return;
     
-    function carregarProximaImagem() {
-        if (index >= containers.length) return;
-        
-        const container = containers[index];
-        const produtoId = container.getAttribute('data-produto-id');
-        
-        // Verificar se já foi carregada
-        if (imagensCarregadas.has(produtoId)) {
-            index++;
-            carregarProximaImagem();
-            return;
-        }
-        
-        fetch(`/api/produto/imagem/${produtoId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.imagem) {
-                    // Substituir SVG por imagem real
-                    const img = document.createElement('img');
-                    img.src = `/uploads/produtos/thumb_${data.imagem}`;
-                    img.className = 'img-thumbnail';
-                    img.style.width = '50px';
-                    img.style.height = '50px';
-                    img.style.objectFit = 'contain';
-                    img.style.cursor = 'pointer';
-                    img.onclick = function() { ampliarImagem(this); };
-                    img.onerror = function() { 
-                        // Se erro, manter placeholder
-                        container.innerHTML = container.innerHTML;
-                    };
-                    
-                    container.innerHTML = '';
-                    container.appendChild(img);
-                    imagensCarregadas.add(produtoId);
-                }
-                index++;
-                
-                // Pequeno delay entre requisições
-                setTimeout(carregarProximaImagem, 200);
-            })
-            .catch(err => {
-                console.log('Erro ao carregar imagem:', err);
-                index++;
-                setTimeout(carregarProximaImagem, 200);
-            });
-    }
-    
-    // Começar carregamento em lotes
-    carregarProximaImagem();
+    fetch(`/api/produto/imagem/${produtoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.imagem) {
+                elementoImg.src = `/uploads/produtos/${data.imagem}`;
+            }
+        })
+        .catch(err => console.error('Erro ao carregar imagem:', err));
 }
 
+// ========== FUNÇÃO PARA AMPLIAR IMAGEM (igual ao PDV) ==========
 function ampliarImagem(elemento) {
     const modalImg = document.getElementById('imagemAmpliada');
-    
-    if (elemento.tagName === 'IMG') {
+    if (elemento && elemento.src) {
         modalImg.src = elemento.src;
     } else {
-        // Se for container com SVG, tentar encontrar imagem ou usar placeholder
-        const img = elemento.querySelector('img');
-        if (img) {
-            modalImg.src = img.src;
-        } else {
-            modalImg.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\' viewBox=\'0 0 300 300\'%3E%3Crect width=\'300\' height=\'300\' fill=\'%23f8f9fa\'/%3E%3Ctext x=\'100\' y=\'150\' font-family=\'Arial\' font-size=\'20\' fill=\'%23adb5bd\'%3ESem%3C/text%3E%3Ctext x=\'110\' y=\'180\' font-family=\'Arial\' font-size=\'20\' fill=\'%23adb5bd\'%3EImagem%3C/text%3E%3C/svg%3E';
-        }
+        modalImg.src = '/static/img/no-image-small.png';
     }
     
     const modal = new bootstrap.Modal(document.getElementById('modalImagem'));
@@ -325,35 +316,113 @@ function ampliarImagem(elemento) {
 }
 
 // DOCUMENT READY
-document.addEventListener('DOMContentLoaded', function() {
-    // Coletar todas as grades
-    const linhas = document.querySelectorAll('#corpoTabelaEstoque tr');
-    todasGrades = Array.from(linhas);
+$(document).ready(function() {
+    // Verificar se a tabela existe
+    if ($('#tabelaEstoque').length === 0) return;
     
-    // Carregar imagens APENAS se houver poucas linhas, ou carregar sob demanda
-    if (todasGrades.length <= 50) {
-        // Carregar imagens gradualmente
-        setTimeout(carregarImagensEstoque, 1000);
-    } else {
-        console.log('Muitas linhas, imagens carregadas sob demanda');
-        // Opcional: carregar apenas quando o usuário rolar a página
+    // Verificar se há linhas no corpo da tabela
+    const linhas = $('#corpoTabelaEstoque tr').length;
+    if (linhas === 0) return;
+    
+    // Verificar se é apenas a linha de "Nenhum produto encontrado"
+    const temProdutos = $('#corpoTabelaEstoque tr').filter(function() {
+        return $(this).find('td[colspan="7"]').length === 0;
+    }).length > 0;
+    
+    if (!temProdutos) return;
+    
+    // Coletar todas as grades
+    todasGrades = Array.from(document.querySelectorAll('#corpoTabelaEstoque tr')).filter(linha => {
+        return !linha.querySelector('td[colspan="7"]');
+    });
+    
+    // Carregar todas as imagens gradualmente
+    if (todasGrades.length > 0) {
+        setTimeout(() => {
+            document.querySelectorAll('img[data-produto-id]').forEach(img => {
+                const produtoId = img.getAttribute('data-produto-id');
+                if (produtoId) {
+                    carregarImagemProduto(produtoId, img);
+                }
+            });
+        }, 500);
     }
     
-    // Inicializar DataTable
-    $('#tabelaEstoque').DataTable({
-        language: {
-            url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json"
-        },
-        pageLength: 25,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-        order: [[1, 'asc']],
-        responsive: true,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
-        drawCallback: function() {
-            $('.dataTables_paginate').addClass('btn-group-sm');
-            atualizarContadoresEstoque();
+    // Pequeno delay para garantir que o DOM esteja completamente carregado
+    setTimeout(function() {
+        try {
+            // Destruir instância anterior se existir
+            if ($.fn.dataTable && $.fn.dataTable.isDataTable('#tabelaEstoque')) {
+                $('#tabelaEstoque').DataTable().destroy();
+                $('#tabelaEstoque').empty(); // Limpar qualquer dado residual
+            }
+            
+            // Inicializar DataTable apenas se houver linhas
+            if (todasGrades.length > 0) {
+                $('#tabelaEstoque').DataTable({
+                    language: {
+                        "sEmptyTable": "Nenhum registro encontrado",
+                        "sInfo": "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                        "sInfoEmpty": "Mostrando 0 até 0 de 0 registros",
+                        "sInfoFiltered": "(Filtrados de _MAX_ registros)",
+                        "sInfoPostFix": "",
+                        "sInfoThousands": ".",
+                        "sLengthMenu": "_MENU_ resultados por página",
+                        "sLoadingRecords": "Carregando...",
+                        "sProcessing": "Processando...",
+                        "sZeroRecords": "Nenhum registro encontrado",
+                        "sSearch": "Pesquisar:",
+                        "oPaginate": {
+                            "sNext": "Próximo",
+                            "sPrevious": "Anterior",
+                            "sFirst": "Primeiro",
+                            "sLast": "Último"
+                        },
+                        "oAria": {
+                            "sSortAscending": ": Ordenar colunas de forma ascendente",
+                            "sSortDescending": ": Ordenar colunas de forma descendente"
+                        }
+                    },
+                    pageLength: 25,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                    order: [[0, 'asc']],
+                    responsive: true,
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>tip',
+                    drawCallback: function() {
+                        $('.dataTables_paginate').addClass('btn-group-sm');
+                        atualizarContadoresEstoque();
+                        
+                        // Recarregar imagens após paginação
+                        setTimeout(() => {
+                            document.querySelectorAll('img[data-produto-id]').forEach(img => {
+                                if (img.src.includes('no-image-small.png')) {
+                                    const produtoId = img.getAttribute('data-produto-id');
+                                    if (produtoId) {
+                                        carregarImagemProduto(produtoId, img);
+                                    }
+                                }
+                            });
+                        }, 200);
+                    },
+                    // Garantir que as colunas estejam corretas
+                    columnDefs: [
+                        { targets: 0, width: "40%" },
+                        { targets: 1, width: "10%" },
+                        { targets: 2, width: "10%" },
+                        { targets: 3, width: "10%" },
+                        { targets: 4, width: "10%" },
+                        { targets: 5, width: "10%" },
+                        { targets: 6, width: "10%" }
+                    ],
+                    // Inicializar com dados limpos
+                    destroy: true,
+                    retrieve: false
+                });
+            }
+        } catch (e) {
+            console.log('Erro ao inicializar DataTable:', e);
         }
-    });
+    }, 100);
     
     // Configurar campo de busca
     const campoBusca = document.getElementById('buscaEstoque');
@@ -370,71 +439,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function verificarBotaoLimpar() {
-        if (campoBusca.value.trim() !== '') {
-            btnLimpar.style.display = 'block';
-        } else {
-            btnLimpar.style.display = 'none';
+        if (btnLimpar) {
+            btnLimpar.style.display = campoBusca.value.trim() !== '' ? 'block' : 'none';
         }
     }
     
-    // Busca com debounce
     let timeoutBusca;
-    campoBusca.addEventListener('input', function() {
-        clearTimeout(timeoutBusca);
-        timeoutBusca = setTimeout(() => {
-            filtrarTabelaEstoque(this.value);
-            
-            if (inputBuscaOriginal) {
-                inputBuscaOriginal.value = this.value;
-            }
-            
-            verificarBotaoLimpar();
-        }, 300);
-        
-        if (this.value.trim() !== '') {
-            btnLimpar.style.display = 'block';
-        } else {
-            btnLimpar.style.display = 'none';
-        }
-    });
-    
-    // Scanner
-    campoBusca.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const codigo = this.value.trim();
-            if (codigo && codigo !== ultimoCodigoLido) {
-                ultimoCodigoLido = codigo;
-                filtrarTabelaEstoque(codigo);
-                
-                if (inputBuscaOriginal) {
-                    inputBuscaOriginal.value = codigo;
-                }
-                
+    if (campoBusca) {
+        campoBusca.addEventListener('input', function() {
+            clearTimeout(timeoutBusca);
+            timeoutBusca = setTimeout(() => {
+                filtrarTabelaEstoque(this.value);
+                if (inputBuscaOriginal) inputBuscaOriginal.value = this.value;
                 verificarBotaoLimpar();
-                
-                setTimeout(() => {
-                    this.value = '';
-                    if (inputBuscaOriginal) {
-                        inputBuscaOriginal.value = '';
-                    }
-                    btnLimpar.style.display = 'none';
-                    this.focus();
-                }, 100);
-            }
-        }
+            }, 300);
+            verificarBotaoLimpar();
+        });
         
-        if (e.key === 'F3') {
-            e.preventDefault();
-            this.focus();
-            this.select();
-        }
-    });
+        campoBusca.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const codigo = this.value.trim();
+                if (codigo && codigo !== ultimoCodigoLido) {
+                    ultimoCodigoLido = codigo;
+                    filtrarTabelaEstoque(codigo);
+                    if (inputBuscaOriginal) inputBuscaOriginal.value = codigo;
+                    verificarBotaoLimpar();
+                    
+                    setTimeout(() => {
+                        this.value = '';
+                        if (inputBuscaOriginal) inputBuscaOriginal.value = '';
+                        if (btnLimpar) btnLimpar.style.display = 'none';
+                        this.focus();
+                    }, 100);
+                }
+            }
+            
+            if (e.key === 'F3') {
+                e.preventDefault();
+                this.focus();
+                this.select();
+            }
+        });
+    }
     
     atualizarContadoresEstoque();
 });
 
-// FILTRAR TABELA
 function filtrarTabelaEstoque(termoBusca) {
     const termo = termoBusca.toLowerCase().trim();
     
@@ -448,21 +499,18 @@ function filtrarTabelaEstoque(termoBusca) {
             const sku = linha.getAttribute('data-sku') || '';
             const localizacao = linha.getAttribute('data-localizacao') || '';
             
-            const encontrou = 
+            linha.style.display = 
                 descricao.includes(termo) ||
                 cor.includes(termo) ||
                 tamanho.includes(termo) ||
                 sku.includes(termo) ||
-                localizacao.includes(termo);
-            
-            linha.style.display = encontrou ? '' : 'none';
+                localizacao.includes(termo) ? '' : 'none';
         }
     });
     
     atualizarContadoresEstoque();
 }
 
-// ATUALIZAR CONTADORES
 function atualizarContadoresEstoque() {
     const linhasVisiveis = todasGrades.filter(linha => linha.style.display !== 'none');
     
@@ -470,10 +518,9 @@ function atualizarContadoresEstoque() {
     let estoqueBaixo = 0;
     
     linhasVisiveis.forEach(linha => {
-        const badgeEstoque = linha.querySelector('td:nth-child(5) .badge');
+        const badgeEstoque = linha.querySelector('td:nth-child(4) .badge');
         if (badgeEstoque) {
-            const textoEstoque = badgeEstoque.textContent.trim();
-            const estoque = parseInt(textoEstoque) || 0;
+            const estoque = parseInt(badgeEstoque.textContent.trim()) || 0;
             totalEstoque += estoque;
             
             if (badgeEstoque.classList.contains('bg-danger') && estoque > 0) {
@@ -483,32 +530,26 @@ function atualizarContadoresEstoque() {
     });
     
     const totalEstoqueElement = document.getElementById('total-estoque');
-    if (totalEstoqueElement) {
-        totalEstoqueElement.textContent = totalEstoque;
-    }
+    if (totalEstoqueElement) totalEstoqueElement.textContent = totalEstoque;
     
     const estoqueBaixoElement = document.querySelector('.text-warning');
-    if (estoqueBaixoElement) {
-        estoqueBaixoElement.textContent = estoqueBaixo;
-    }
+    if (estoqueBaixoElement) estoqueBaixoElement.textContent = estoqueBaixo;
 }
 
-// LIMPAR BUSCA
 function limparBusca() {
     const campoBusca = document.getElementById('buscaEstoque');
     const btnLimpar = document.getElementById('limpar-busca');
     const inputBuscaOriginal = document.getElementById('inputBuscaOriginal');
     
-    campoBusca.value = '';
-    ultimoCodigoLido = '';
-    filtrarTabelaEstoque('');
-    
-    btnLimpar.style.display = 'none';
-    campoBusca.focus();
-    
-    if (inputBuscaOriginal) {
-        inputBuscaOriginal.value = '';
+    if (campoBusca) {
+        campoBusca.value = '';
+        ultimoCodigoLido = '';
+        filtrarTabelaEstoque('');
+        if (btnLimpar) btnLimpar.style.display = 'none';
+        campoBusca.focus();
     }
+    
+    if (inputBuscaOriginal) inputBuscaOriginal.value = '';
 }
 </script>
 {% endblock %}
